@@ -119,7 +119,18 @@ class PasswordChangeView(APIView):
                 session.delete()
 
 
-class Root404View(APIView):
+class NotFoundAPIView(APIView):
+    response_data = {"message": " URL Not found"}
 
-    def get(self, request, *args, **kwargs):
-        raise Http404("Root URL not found")
+    def get(self, request):
+        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request):
+        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request):
+        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
+
