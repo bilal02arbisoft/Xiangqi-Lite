@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from users.serializers import CustomUserSerializer, PasswordChangeSerializer
 from django.utils import timezone
 from django.contrib.sessions.models import Session
-from users.models import CustomUser
+from users.models import CustomUser, Profile
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.http import Http404
 from rest_framework.views import APIView
@@ -78,6 +78,17 @@ class UserProfileEditView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        profile = Profile.objects.get(user=user)
+        profile.delete()
+        user.delete()
+        response_data = {"message": "User deleted successfully"}
+
+        return Response(response_data, status=status.HTTP_204_NO_CONTENT)
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated]
 
