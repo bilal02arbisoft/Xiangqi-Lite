@@ -42,7 +42,7 @@ class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, related_name='profile', on_delete=models.CASCADE)
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     bio = models.TextField(max_length=500, null=True, blank=True)
-    rating = models.FloatField(default=600.0)  # Default rating for 'newbie'
+    rating = models.FloatField(default=600.0)
     country = models.CharField(max_length=50, null=True, blank=True)
     skill_level = models.CharField(max_length=20, choices=SKILL_LEVEL_CHOICES, default='newbie')
 
