@@ -6,8 +6,11 @@ from django.utils import timezone
 from django.contrib.sessions.models import Session
 from users.models import CustomUser, Profile
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.http import Http404
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
+from django.http import JsonResponse
+from rest_framework_simplejwt.views import TokenRefreshView
 
 
 class UsersListView(APIView):
@@ -18,6 +21,59 @@ class UsersListView(APIView):
 
         return Response(users.data)
 
+
+import logging
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        try:
+            response = super().post(request, *args, **kwargs)
+            data = response.data
+            access_token = data.get('access')
+            refresh_token = data.get('refresh')
+            response = JsonResponse({'message': 'Login successful'})
+            response.set_cookie(
+                key='access_token',
+                value=access_token,
+                httponly=True,
+                samesite='None',
+                secure=True,
+            )
+            response.set_cookie(
+                key='refresh_token',
+                value=refresh_token,
+                httponly=True,
+                samesite='None',
+                secure=True,
+            )
+
+            return response
+        except AuthenticationFailed as e:
+
+            return Response({'error': str(e)}, status=401)
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        try:
+            refresh_token = request.COOKIES.get('refresh_token')
+            request.data['refresh'] = refresh_token
+            response = super().post(request, *args, **kwargs)
+            new_access_token = response.data.get('access')
+            response.set_cookie(
+                key='access_token',
+                value=new_access_token,
+                httponly=True,
+                samesite='None',
+                secure=True,
+            )
+
+            return response
+
+        except Exception as e:
+
+            return Response({'error': str(e)}, status=400)
 
 class SignupView(APIView):
     @staticmethod

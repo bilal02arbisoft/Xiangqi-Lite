@@ -29,8 +29,17 @@ SECRET_KEY = 'django-insecure-6%nmdtt!##u653o-k5&nom6clge10lx%0ak=dn9f96s(vc@6r$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 AUTH_USER_MODEL = 'users.CustomUser'
-ALLOWED_HOSTS = []
-
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'cookie',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Application definition
 
@@ -43,7 +52,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'rest_framework',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -59,6 +69,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
