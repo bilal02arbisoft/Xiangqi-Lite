@@ -162,4 +162,9 @@ cython_debug/
 #.idea/
 profile_pictures
 xiangqi_env
-
+../.DS_Store
+../.idea/
+__init__.py
+users/tests/
+.idea/
+.DS_Store
