@@ -24,7 +24,7 @@ from users.views import NotFoundAPIView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),
-    re_path(r'^.*$', NotFoundAPIView.as_view(), name='not-found'),
+    # re_path(r'^.*$', NotFoundAPIView.as_view(), name='not-found'),
 
 
 ]

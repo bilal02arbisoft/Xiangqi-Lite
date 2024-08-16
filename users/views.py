@@ -8,9 +8,8 @@ from users.models import CustomUser, Profile
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.exceptions import AuthenticationFailed
-from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class UsersListView(APIView):
@@ -22,9 +21,6 @@ class UsersListView(APIView):
         return Response(users.data)
 
 
-import logging
-
-
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         try:
@@ -32,27 +28,15 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             data = response.data
             access_token = data.get('access')
             refresh_token = data.get('refresh')
-            response = JsonResponse({'message': 'Login successful'})
-            response.set_cookie(
-                key='access_token',
-                value=access_token,
-                httponly=True,
-                samesite='None',
-                secure=True,
-            )
-            response.set_cookie(
-                key='refresh_token',
-                value=refresh_token,
-                httponly=True,
-                samesite='None',
-                secure=True,
-            )
 
-            return response
-        except AuthenticationFailed as e:
+            return Response({
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'message': 'Login successful'
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
 
-            return Response({'error': str(e)}, status=401)
-
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
@@ -109,6 +93,7 @@ class LogoutView(APIView):
 
 class UserProfileEditView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     @staticmethod
     def get(request):
@@ -123,16 +108,14 @@ class UserProfileEditView(APIView):
         serializer = CustomUserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-
             response_data = {
                 "message": "Successfully Updated the Profile",
-                "Profile:": serializer.data
+                "Profile": serializer.data
             }
 
             return Response(response_data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class UserDeleteView(APIView):
     permission_classes = [IsAuthenticated]

@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from users.models import CustomUser, Profile
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.hashers import check_password
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -28,7 +27,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def validate_username(value):
-
         if CustomUser.objects.filter(username=value).exists():
 
             raise serializers.ValidationError("A user with this username already exists.")
@@ -44,7 +42,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
     def validate(self, data):
         password = data.get('password')
         email = data.get('email')
-
         if password and email and plain_password_equals_email(password, email):
 
             raise serializers.ValidationError("Password and email cannot be the same.")
@@ -52,7 +49,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-
         profile_data = validated_data.pop('profile', {})
         user = CustomUser.objects.create_user(
             email=validated_data['email'],
@@ -66,7 +62,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        print("Update method called")
         profile_data = validated_data.pop('profile', {})
 
         instance.username = validated_data.get('username', instance.username)
@@ -75,11 +70,11 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
         profile = getattr(instance, 'profile', None)
         if profile is not None:
-            if profile_data:
-                profile.country = profile_data.get('country', profile.country)
-                profile.bio = profile_data.get('bio', profile.bio)
-                profile.profile_picture = profile_data.get('profile_picture', profile.profile_picture)
 
+            if profile_data:
+
+                for attr, value in profile_data.items():
+                    setattr(profile, attr, value)
                 profile.save()
         else:
             if profile_data:
@@ -87,7 +82,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
                 Profile.objects.create(user=instance, **profile_data)
 
         return instance
-
 
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
