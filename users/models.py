@@ -1,6 +1,11 @@
 from django.db import models
 from users.managers import CustomUserManager
 from django.conf import settings
+from datetime import timedelta
+import random
+import string
+from django.utils import timezone
+from users.tasks import send_otp_email_task, send_verification_email_task
 from django.core.validators import EmailValidator, RegexValidator
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 
@@ -14,6 +19,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(unique=True, max_length=30, validators=[username_validator], null=False, blank=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_email_verified = models.BooleanField(default=False)
+    email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_generated_at = models.DateTimeField(blank=True, null=True)
 
     objects = CustomUserManager()
     USERNAME_FIELD = 'username'
@@ -21,8 +29,37 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
 
-        return self.email
+        return self.username
 
+    def generate_otp(self):
+        otp = ''.join(random.choices(string.digits, k=6))
+        self.email_verification_otp = otp
+        self.otp_generated_at = timezone.now()
+        self.save()
+        self.send_otp_email(otp)
+        return otp
+
+    def send_otp_email(self, otp):
+        subject = 'Your Email Verification OTP'
+        message = f'Your OTP for email verification is {otp}. It is valid for 10 minutes.'
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [self.email]
+        send_otp_email_task.delay(subject, message, from_email, recipient_list)
+
+    def send_verify_email(self):
+        subject = 'Email Verification Successful'
+        message = f'Your email has been verified.'
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [self.email]
+        send_verification_email_task.delay(subject, message, from_email, recipient_list)
+
+    def is_otp_valid(self, otp):
+        now = timezone.now()
+        if self.email_verification_otp == otp and (now - self.otp_generated_at) <= timedelta(minutes=10):
+            self.is_email_verified = True
+            self.save()
+            return True
+        return False
 
 class Profile(models.Model):
     SKILL_LEVEL_CHOICES = [

@@ -14,7 +14,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'username', 'password', 'profile']
+        fields = ['email', 'username', 'password', 'profile', 'is_email_verified']
         extra_kwargs = {'password': {'write_only': True}}
 
     @staticmethod
@@ -111,6 +111,45 @@ class PasswordChangeSerializer(serializers.Serializer):
 
         return data
 
+class RequestOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = CustomUser.objects.get(email=value)
+        except CustomUser.DoesNotExist:
+            raise serializers.ValidationError(f"This email {value} is not registered.")
+        return value
+
+    def save(self):
+        email = self.validated_data['email']
+        user = CustomUser.objects.get(email=email)
+        user.generate_otp()
+
+        return user
+
+class VerifyOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+    def validate(self, data):
+        try:
+            user = CustomUser.objects.get(email=data['email'])
+        except CustomUser.DoesNotExist:
+            raise serializers.ValidationError("Invalid email.")
+
+        if not user.is_otp_valid(data['otp']):
+            raise serializers.ValidationError("Invalid or expired OTP.")
+
+        return data
+
+    def save(self):
+        user = CustomUser.objects.get(email=self.validated_data['email'])
+        user.is_email_verified = True
+        user.email_verification_otp = None
+        user.otp_generated_at = None
+        user.save()
+        return user
 
 def plain_password_equals_email(password, email):
 
@@ -120,3 +159,4 @@ def plain_password_equals_email(password, email):
 def plain_password_equals_username(password, username):
 
     return password == username
+

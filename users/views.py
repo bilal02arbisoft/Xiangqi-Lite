@@ -1,7 +1,6 @@
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from users.serializers import CustomUserSerializer, PasswordChangeSerializer
 from django.utils import timezone
 from django.contrib.sessions.models import Session
 from users.models import CustomUser, Profile
@@ -10,6 +9,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.parsers import MultiPartParser, FormParser
+from users.serializers import (CustomUserSerializer,
+                               PasswordChangeSerializer,
+                               RequestOtpSerializer,
+                               VerifyOtpSerializer)
 
 
 class UsersListView(APIView):
@@ -157,6 +160,37 @@ class PasswordChangeView(APIView):
 
                 session.delete()
 
+
+class RequestOtpView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        user_email = {'email': request.user.email}
+        serializer = RequestOtpSerializer(data=user_email)
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response({'message': 'OTP sent to your email successfully'}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyOtpView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        user_email = request.user.email
+        request_data = {
+            'email': user_email,
+            'otp': request.data.get('otp')
+        }
+        serializer = VerifyOtpSerializer(data=request_data)
+        if serializer.is_valid():
+            serializer.save()
+            request.user.send_verify_email()
+
+            return Response({'message': 'Email verified successfully'}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class NotFoundAPIView(APIView):
     response_data = {"message": " URL Not found"}
