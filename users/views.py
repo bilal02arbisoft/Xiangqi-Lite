@@ -1,158 +1,199 @@
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
 from django.contrib.sessions.models import Session
-from users.models import CustomUser, Profile
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework.parsers import MultiPartParser, FormParser
-from users.serializers import (CustomUserSerializer,
-                               PasswordChangeSerializer,
-                               RequestOtpSerializer,
-                               VerifyOtpSerializer)
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from users.error_handling import handle_exceptions
+from users.models import CustomUser, Profile
+from users.serializers import CustomUserSerializer, PasswordChangeSerializer, RequestOtpSerializer, VerifyOtpSerializer
 
 
-class UsersListView(APIView):
+class BaseAPIView(APIView):
+    """
+    Base API view that includes default permission classes and error handling.
+    All views inheriting from this class will automatically apply the error handling decorator.
+    """
     permission_classes = [IsAuthenticated]
 
+class UsersListView(BaseAPIView):
+    """
+    View to retrieve a list of all users. Requires authentication.
+    """
+    @handle_exceptions
     def get(self, request):
+        """
+        Handle GET requests to list all users.
+        """
         users = CustomUserSerializer(CustomUser.objects.all(), many=True)
 
-        return Response(users.data)
+        return Response(users.data, status=status.HTTP_200_OK)
 
+class CustomTokenObtainPairView(TokenObtainPairView, BaseAPIView):
+    """
+    Custom view to handle user login and return JWT tokens.
+    """
+    permission_classes = []
 
-class CustomTokenObtainPairView(TokenObtainPairView):
+    @handle_exceptions
     def post(self, request, *args, **kwargs):
-        try:
-            response = super().post(request, *args, **kwargs)
-            data = response.data
-            access_token = data.get('access')
-            refresh_token = data.get('refresh')
+        response = super().post(request, *args, **kwargs)
+        data = response.data
+        access_token = data.get('access')
+        refresh_token = data.get('refresh')
 
-            return Response({
-                'access_token': access_token,
-                'refresh_token': refresh_token,
-                'message': 'Login successful'
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
+        return Response({
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'message': 'Login successful'
+        }, status=status.HTTP_200_OK)
 
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+class CustomTokenRefreshView(TokenRefreshView, BaseAPIView):
+    """
+    Custom view to handle refreshing JWT tokens using refresh token.
+    """
+    permission_classes = []
 
-class CustomTokenRefreshView(TokenRefreshView):
+    @handle_exceptions
     def post(self, request, *args, **kwargs):
-        try:
-            refresh_token = request.COOKIES.get('refresh_token')
-            request.data['refresh'] = refresh_token
-            response = super().post(request, *args, **kwargs)
-            new_access_token = response.data.get('access')
-            response.set_cookie(
-                key='access_token',
-                value=new_access_token,
-                httponly=True,
-                samesite='None',
-                secure=True,
-            )
+        refresh_token = request.COOKIES.get('refresh_token')
+        request.data['refresh'] = refresh_token
+        response = super().post(request, *args, **kwargs)
+        new_access_token = response.data.get('access')
+        response.set_cookie(
+            key='access_token',
+            value=new_access_token,
+            httponly=True,
+            samesite='None',
+            secure=True,
+        )
 
-            return response
+        return Response(response, status=status.HTTP_200_OK)
 
-        except Exception as e:
+class SignupView(BaseAPIView):
+    """
+    View to handle user signup. No authentication required.
+    """
+    permission_classes = []
 
-            return Response({'error': str(e)}, status=400)
-
-class SignupView(APIView):
-    @staticmethod
-    def post(request):
+    @handle_exceptions
+    def post(self, request):
+        """
+        Handle POST requests to create a new user.
+        """
         serializer = CustomUserSerializer(data=request.data)
         if serializer.is_valid():
 
             serializer.save()
             response_data = {
-                "message": "User created successfully",
-                "user": serializer.data
-                }
+                'message': 'User created successfully',
+                'user': serializer.data
+            }
 
             return Response(response_data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class LogoutView(BaseAPIView):
+    """
+    View to handle user logout by blacklisting the refresh token.
+    """
 
-class LogoutView(APIView):
-    permission_classes = (IsAuthenticated,)
-
+    @handle_exceptions
     def post(self, request):
-        try:
-            refresh_token = request.data["refresh"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+        refresh_token = request.data['refresh']
+        token = RefreshToken(refresh_token)
+        token.blacklist()
 
-            return Response("Logged out successfully", status=status.HTTP_205_RESET_CONTENT)
-        except Exception:
+        return Response('Logged out successfully', status=status.HTTP_205_RESET_CONTENT)
 
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserProfileEditView(APIView):
-    permission_classes = [IsAuthenticated]
+class UserProfileEditView(BaseAPIView):
+    """
+    View to handle retrieving and updating user profile. Requires authentication.
+    """
     parser_classes = [MultiPartParser, FormParser]
 
-    @staticmethod
-    def get(request):
+    @handle_exceptions
+    def get(self, request):
+        """
+        Handle GET requests to retrieve user profile.
+        """
         user = request.user
         serializer = CustomUserSerializer(user)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @staticmethod
-    def put(request):
+    @handle_exceptions
+    def put(self, request):
+        """
+        Handle PUT requests to update user profile.
+        """
         user = request.user
         serializer = CustomUserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
+
             serializer.save()
             response_data = {
-                "message": "Successfully Updated the Profile",
-                "Profile": serializer.data
+                'message': 'Successfully Updated the Profile',
+                'Profile': serializer.data
             }
 
             return Response(response_data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class UserDeleteView(APIView):
-    permission_classes = [IsAuthenticated]
+class UserDeleteView(BaseAPIView):
+    """
+    View to handle user deletion. Requires authentication.
+    """
 
+    @handle_exceptions
     def delete(self, request):
         user = request.user
-        profile = Profile.objects.get(user=user)
-        profile.delete()
+        Profile.objects.filter(user=user).delete()
         user.delete()
-        response_data = {"message": "User deleted successfully"}
 
-        return Response(response_data, status=status.HTTP_204_NO_CONTENT)
-class PasswordChangeView(APIView):
-    permission_classes = [IsAuthenticated]
+        return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
+class PasswordChangeView(BaseAPIView):
+    """
+    View to handle password change for authenticated users.
+    """
+
+    @handle_exceptions
     def get_object(self):
+        """
+        Retrieve the authenticated user object.
+        """
 
-        return self.request.user
+        return
 
-    def post(self, request, *args, **kwargs):
-        user = self.get_object()
-        serializer = PasswordChangeSerializer(data=request.data, context={'user': request.user})
+    @handle_exceptions
+    def post(self, request):
+        """
+        Handle POST requests to change the user's password.
+        """
+        user = self.request.user
+        serializer = PasswordChangeSerializer(data=request.data, context={'user': user})
         if serializer.is_valid():
 
             user.set_password(serializer.validated_data['new_password'])
             user.save()
             self._invalidate_user_sessions(user)
 
-            return Response({"message": "Password has been changed successfully."}, status=status.HTTP_200_OK)
+            return Response({'message': 'Password has been changed successfully.'}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @staticmethod
-    def _invalidate_user_sessions(user):
+    @handle_exceptions
+    def _invalidate_user_sessions(self, user):
+        """
+        Invalidate all active sessions for the user.
+        """
         sessions = Session.objects.filter(expire_date__gte=timezone.now())
         for session in sessions:
             session_data = session.get_decoded()
@@ -160,23 +201,29 @@ class PasswordChangeView(APIView):
 
                 session.delete()
 
+class RequestOtpView(BaseAPIView):
+    """
+    View to handle sending an OTP to the user's email. Requires authentication.
+    """
 
-class RequestOtpView(APIView):
-    permission_classes = (IsAuthenticated,)
-
+    @handle_exceptions
     def post(self, request, *args, **kwargs):
         user_email = {'email': request.user.email}
         serializer = RequestOtpSerializer(data=user_email)
         if serializer.is_valid():
+
             serializer.save()
 
             return Response({'message': 'OTP sent to your email successfully'}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class VerifyOtpView(APIView):
-    permission_classes = (IsAuthenticated,)
+class VerifyOtpView(BaseAPIView):
+    """
+    View to handle OTP verification. Requires authentication.
+    """
 
+    @handle_exceptions
     def post(self, request, *args, **kwargs):
         user_email = request.user.email
         request_data = {
@@ -185,6 +232,7 @@ class VerifyOtpView(APIView):
         }
         serializer = VerifyOtpSerializer(data=request_data)
         if serializer.is_valid():
+
             serializer.save()
             request.user.send_verify_email()
 
@@ -192,18 +240,19 @@ class VerifyOtpView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class NotFoundAPIView(APIView):
-    response_data = {"message": " URL Not found"}
+class NotFoundAPIView(BaseAPIView):
+    """
+    View to handle not found (404) errors for unsupported routes.
+    """
+    permission_classes = []
 
-    def get(self, request):
-        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
+    @handle_exceptions
+    def handle_not_found(self, request, *args, **kwargs):
+        response_data = {'message': 'URL Not found'}
 
-    def post(self, request):
-        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
+        return Response(response_data, status=status.HTTP_404_NOT_FOUND)
 
-    def put(self, request):
-        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
-
-    def delete(self, request):
-        return Response(self.response_data, status=status.HTTP_404_NOT_FOUND)
-
+    get = handle_not_found
+    post = handle_not_found
+    put = handle_not_found
+    delete = handle_not_found

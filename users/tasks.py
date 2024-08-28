@@ -1,12 +1,10 @@
-# users/tasks.py
-
 from celery import shared_task
 from django.core.mail import send_mail
 
-@shared_task
-def send_otp_email_task(subject, message, from_email, recipient_list):
-    send_mail(subject, message, from_email, recipient_list)
 
 @shared_task
-def send_verification_email_task(subject, message, from_email, recipient_list):
+def send_otp_email_task(subject, message, from_email, recipient_list):
+    """
+    Celery task to send an OTP email.
+    """
     send_mail(subject, message, from_email, recipient_list)

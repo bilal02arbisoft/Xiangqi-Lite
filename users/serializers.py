@@ -1,15 +1,23 @@
-from rest_framework import serializers
-from users.models import CustomUser, Profile
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
+
+from users.error_handling import handle_exceptions
+from users.models import CustomUser, Profile
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Profile model.
+    """
     class Meta:
         model = Profile
         fields = ['bio', 'rating', 'profile_picture', 'country', 'skill_level']
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the CustomUser model.
+    """
     profile = ProfileSerializer()
 
     class Meta:
@@ -18,37 +26,56 @@ class CustomUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     @staticmethod
+    @handle_exceptions
     def validate_email(value):
+        """
+        Validate that the email is unique.
+        """
         if CustomUser.objects.filter(email=value).exists():
 
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError('A user with this email already exists.')
 
         return value
 
     @staticmethod
+    @handle_exceptions
     def validate_username(value):
+        """
+        Validate that the username is unique.
+        """
         if CustomUser.objects.filter(username=value).exists():
 
-            raise serializers.ValidationError("A user with this username already exists.")
+            raise serializers.ValidationError('A user with this username already exists.')
 
         return value
 
     @staticmethod
+    @handle_exceptions
     def validate_password(value):
+        """
+        Validate that the password meets all security requirements.
+        """
         validate_password(value)
 
         return value
 
     def validate(self, data):
+        """
+        Validate that password and email are not the same.
+        """
         password = data.get('password')
         email = data.get('email')
         if password and email and plain_password_equals_email(password, email):
 
-            raise serializers.ValidationError("Password and email cannot be the same.")
+            raise serializers.ValidationError('Password and email cannot be the same.')
 
         return data
 
+    @handle_exceptions
     def create(self, validated_data):
+        """
+        Create a new user and associated profile.
+        """
         profile_data = validated_data.pop('profile', {})
         user = CustomUser.objects.create_user(
             email=validated_data['email'],
@@ -61,102 +88,134 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
         return user
 
+    @handle_exceptions
     def update(self, instance, validated_data):
+        """
+        Update an existing user and associated profile.
+        """
         profile_data = validated_data.pop('profile', {})
-
         instance.username = validated_data.get('username', instance.username)
         instance.email = validated_data.get('email', instance.email)
         instance.save()
 
-        profile = getattr(instance, 'profile', None)
-        if profile is not None:
-
-            if profile_data:
-
-                for attr, value in profile_data.items():
-                    setattr(profile, attr, value)
-                profile.save()
-        else:
-            if profile_data:
-
-                Profile.objects.create(user=instance, **profile_data)
+        profile, created = Profile.objects.get_or_create(user=instance)
+        for attr, value in profile_data.items():
+            setattr(profile, attr, value)
+        profile.save()
 
         return instance
 
+
 class PasswordChangeSerializer(serializers.Serializer):
+    """
+    Serializer for handling password change requests.
+    """
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 
     @staticmethod
+    @handle_exceptions
     def validate_new_password(value):
+        """
+        Validate the new password.
+        """
         validate_password(value)
 
         return value
 
+    @handle_exceptions
     def validate(self, data):
+        """
+        Validate the old and new passwords.
+        """
         old_password = data.get('old_password')
         new_password = data.get('new_password')
         user = self.context.get('user')
 
         if not user.check_password(old_password):
 
-            raise serializers.ValidationError("Old password is incorrect.")
+            raise serializers.ValidationError('Old password is incorrect.')
         if plain_password_equals_email(new_password, user.email):
 
-            raise serializers.ValidationError("New password cannot be the same as the email.")
-
+            raise serializers.ValidationError('New password cannot be the same as the email.')
         if user.check_password(new_password):
 
-            raise serializers.ValidationError("Pls use different password.")
+            raise serializers.ValidationError('Please use a different password.')
 
         return data
 
+
 class RequestOtpSerializer(serializers.Serializer):
+    """
+    Serializer for requesting an OTP.
+    """
     email = serializers.EmailField()
 
+    @handle_exceptions
     def validate_email(self, value):
-        try:
-            user = CustomUser.objects.get(email=value)
-        except CustomUser.DoesNotExist:
+        """
+        Validate that the email exists in the system.
+        """
+        if not CustomUser.objects.filter(email=value).exists():
+
             raise serializers.ValidationError(f"This email {value} is not registered.")
+
         return value
 
+    @handle_exceptions
     def save(self):
+        """
+        Generate and send OTP to the user's email.
+        """
         email = self.validated_data['email']
         user = CustomUser.objects.get(email=email)
         user.generate_otp()
 
         return user
 
+
 class VerifyOtpSerializer(serializers.Serializer):
+    """
+    Serializer for verifying an OTP.
+    """
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)
 
+    @handle_exceptions
     def validate(self, data):
-        try:
-            user = CustomUser.objects.get(email=data['email'])
-        except CustomUser.DoesNotExist:
-            raise serializers.ValidationError("Invalid email.")
-
+        """
+        Validate the OTP and email combination.
+        """
+        user = CustomUser.objects.get(email=data['email'])
         if not user.is_otp_valid(data['otp']):
-            raise serializers.ValidationError("Invalid or expired OTP.")
+
+            raise serializers.ValidationError('Invalid or expired OTP.')
 
         return data
 
+    @handle_exceptions
     def save(self):
+        """
+        Mark the user's email as verified.
+        """
         user = CustomUser.objects.get(email=self.validated_data['email'])
         user.is_email_verified = True
         user.email_verification_otp = None
         user.otp_generated_at = None
         user.save()
+
         return user
 
-def plain_password_equals_email(password, email):
 
+def plain_password_equals_email(password, email):
+    """
+    Check if the password is the same as the email.
+    """
     return password == email
 
 
 def plain_password_equals_username(password, username):
-
+    """
+    Check if the password is the same as the username.
+    """
     return password == username
-

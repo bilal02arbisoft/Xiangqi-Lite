@@ -1,10 +1,17 @@
 from django.urls import path
-from users.views import (SignupView, LogoutView,
-                         UserProfileEditView, PasswordChangeView,
-                         UsersListView, UserDeleteView, CustomTokenObtainPairView,
-                         CustomTokenRefreshView,
-                         RequestOtpView, VerifyOtpView)
 
+from users.views import (
+    CustomTokenObtainPairView,
+    CustomTokenRefreshView,
+    LogoutView,
+    PasswordChangeView,
+    RequestOtpView,
+    SignupView,
+    UserDeleteView,
+    UserProfileEditView,
+    UsersListView,
+    VerifyOtpView,
+)
 
 urlpatterns = [
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -17,5 +24,4 @@ urlpatterns = [
     path('delete/', UserDeleteView.as_view(), name='delete'),
     path('requestotp/', RequestOtpView.as_view(), name='requestotp'),
     path('verifyotp/', VerifyOtpView.as_view(), name='verifyotp'),
-
 ]
