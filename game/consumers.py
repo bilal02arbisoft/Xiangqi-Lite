@@ -1,15 +1,18 @@
 import json
+
 from channels.generic.websocket import AsyncWebsocketConsumer
+
 from game.handlers import game_handler
 
-class XiangqiConsumer(AsyncWebsocketConsumer):
+
+class GameConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lobby_group_name = None
 
     async def connect(self):
 
-        user = self.scope["user"]
+        user = self.scope['user']
         if user.is_authenticated:
 
             self.lobby_group_name = 'lobby_group'
@@ -46,5 +49,3 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
 
         message_data = event['message_data']
         await self.send(text_data=json.dumps(message_data))
-
-
