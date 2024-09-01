@@ -20,6 +20,7 @@ class Game(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
     red_time_remaining = models.IntegerField(default=600)
     black_time_remaining = models.IntegerField(default=600)
+    viewers = models.ManyToManyField(CustomUser, related_name='viewers', blank=True)
 
     def add_move(self, uci_move, thinking_time):
 

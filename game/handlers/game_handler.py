@@ -15,12 +15,36 @@ async def route_event(consumer, data):
         'game.users.list': handle_game_users_list,
         'game.join': handle_game_join,
         'game.move': handle_game_move,
+        'game.chat': handle_game_chat,
     }
 
     handler = handlers.get(event_type)
     if handler:
 
         await handler(consumer, data)
+
+async def handle_game_chat(consumer, data):
+    chat_message = data.get('message')
+    if not chat_message:
+        await notify(consumer, consumer.channel_name, {'type': 'error', 'message': 'No message provided.'})
+
+        return
+
+    message_data = {
+        'type': 'game.chat',
+        'username': consumer.scope['user'].username,  # Assuming the username is stored in the scope
+        'message': chat_message,
+        'timestamp': datetime.now().isoformat()
+    }
+
+    await notify(
+        consumer,
+        consumer.room_group_name,
+        message_data,
+        is_group=True,
+        exclude_channel=consumer.channel_name
+    )
+
 
 async def handle_game_join(consumer, data):
     consumer.game_id = data.get('id')
@@ -35,9 +59,26 @@ async def handle_game_join(consumer, data):
     if not game_data:
 
         return
+    if game_data['red_player'] and game_data['black_player']:
+        role = 'viewer'
+    else:
+        role = 'player'
 
+    consumer.scope['role'] = role
     player_username = consumer.scope['user'].username
-    if not game_data['red_player']:
+    if role == 'viewer':
+        await add_viewer(consumer.game_id, consumer.scope['user'].username)
+        # Use existing notify function to inform all clients in the room group
+        await notify(
+            consumer,
+            consumer.room_group_name,
+            {
+                'type': 'game.viewer.joined',
+                'username': consumer.scope['user'].username
+            },
+            is_group=True
+        )
+    elif not game_data['red_player']:
 
         await update_game_players(consumer.game_id, red_player_username=player_username)
     elif not game_data['black_player']:
@@ -192,3 +233,11 @@ def update_game_players(game_id, red_player_username=None, black_player_username
         'red_player': game.red_player.username if game.red_player else None,
         'black_player': game.black_player.username if game.black_player else None
     }
+
+@database_sync_to_async
+def add_viewer(game_id, username):
+    decoded_id = hashids.decode(game_id)
+    game = Game.objects.get(id=decoded_id[0])
+    user = CustomUser.objects.get(username=username)
+    game.viewers.add(user)
+    game.save()
