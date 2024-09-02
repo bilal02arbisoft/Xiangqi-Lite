@@ -1,21 +1,22 @@
 from django.db import models
 
 from game.utils import hashids
-from users.models import CustomUser
+from users.models import CustomUser, Player
 
 
 class Game(models.Model):
-    red_player = models.ForeignKey(CustomUser, related_name='red_player', on_delete=models.SET_NULL,
+    TURN_CHOICES = [('red', 'Red'), ('black', 'Black')]
+    STATUS_CHOICES = [('ongoing', 'Ongoing'), ('completed', 'Completed'),
+                      ('draw', 'Draw'), ('abandoned', 'Abandoned')]
+    red_player = models.ForeignKey(Player, related_name='red_player', on_delete=models.CASCADE,
                                    null=True, blank=True)
-    black_player = models.ForeignKey(CustomUser, related_name='black_player', on_delete=models.SET_NULL,
+    black_player = models.ForeignKey(Player, related_name='black_player', on_delete=models.CASCADE,
                                      null=True, blank=True)
     fen = models.CharField(max_length=500)
     initial_fen = models.CharField(max_length=500)
     moves = models.JSONField(blank=True, default=list)
-    turn = models.CharField(max_length=10, choices=[('red', 'Red'), ('black', 'Black')])
-    status = models.CharField(max_length=10, choices=[('ongoing', 'Ongoing'), ('completed', 'Completed'),
-                                                      ('draw', 'Draw'), ('abandoned', 'Abandoned')],
-                              default='ongoing')
+    turn = models.CharField(max_length=10, choices=TURN_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ongoing')
     started_at = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
     red_time_remaining = models.IntegerField(default=600)
@@ -29,6 +30,7 @@ class Game(models.Model):
         self.moves = current_moves
 
         if self.turn == 'red':
+
             self.red_time_remaining -= thinking_time
         else:
             self.black_time_remaining -= thinking_time
