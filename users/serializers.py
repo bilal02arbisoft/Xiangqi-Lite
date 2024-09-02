@@ -1,8 +1,9 @@
 from django.contrib.auth.password_validation import validate_password
+from django.db.models.signals import post_save
 from rest_framework import serializers
 
 from users.error_handling import handle_exceptions
-from users.models import CustomUser, Profile
+from users.models import CustomUser, Player, Profile
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -11,7 +12,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Profile
-        fields = ['bio', 'rating', 'profile_picture', 'country', 'skill_level']
+        fields = ['bio', 'profile_picture', 'country']
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -19,10 +20,11 @@ class CustomUserSerializer(serializers.ModelSerializer):
     Serializer for the CustomUser model.
     """
     profile = ProfileSerializer()
+    skill_level = serializers.ChoiceField(choices=Player.SKILL_LEVEL_CHOICES, write_only=True, required=True)
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'username', 'password', 'profile', 'is_email_verified']
+        fields = ['email', 'username', 'password', 'profile', 'is_email_verified', 'skill_level']
         extra_kwargs = {'password': {'write_only': True}}
 
     @staticmethod
@@ -77,11 +79,13 @@ class CustomUserSerializer(serializers.ModelSerializer):
         Create a new user and associated profile.
         """
         profile_data = validated_data.pop('profile', {})
+        skill_level = validated_data.pop('skill_level', None)
         user = CustomUser.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'],
             password=validated_data['password']
         )
+        post_save.send(sender=user.__class__, instance=user, created=True, manual=True, skill_level=skill_level)
         if profile_data:
 
             Profile.objects.create(user=user, **profile_data)

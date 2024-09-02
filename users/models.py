@@ -37,8 +37,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
-    email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
     otp_generated_at = models.DateTimeField(blank=True, null=True)
+    email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
 
     objects = CustomUserManager()
 
@@ -46,6 +46,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['email']
 
     def __str__(self):
+
         return self.username
 
     def generate_otp(self):
@@ -91,22 +92,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 class Profile(models.Model):
     """
-    Model representing user profiles with skill levels and additional info.
+    Model representing user profiles and additional info.
     """
-    SKILL_LEVEL_CHOICES = [
-        ('newbie', 'Newbie'),
-        ('beginner', 'Beginner'),
-        ('intermediate', 'Intermediate'),
-        ('advanced', 'Advanced'),
-    ]
-
-    SKILL_LEVEL_RATINGS = {
-        'newbie': 600.0,
-        'beginner': 1200.0,
-        'intermediate': 1800.0,
-        'advanced': 2400.0,
-    }
-
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         related_name='profile',
@@ -114,9 +101,29 @@ class Profile(models.Model):
     )
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     bio = models.TextField(max_length=500, null=True, blank=True)
-    rating = models.FloatField(default=600.0)
     country = models.CharField(max_length=50, null=True, blank=True)
+
+
+class Player(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='player')
+    games_played = models.IntegerField(default=0)
+    games_won = models.IntegerField(default=0)
+    games_lost = models.IntegerField(default=0)
+    games_drawn = models.IntegerField(default=0)
+    SKILL_LEVEL_CHOICES = [
+        ('newbie', 'Newbie'),
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+    ]
     skill_level = models.CharField(max_length=20, choices=SKILL_LEVEL_CHOICES, default='newbie')
+    SKILL_LEVEL_RATINGS = {
+        'newbie': 600.0,
+        'beginner': 1200.0,
+        'intermediate': 1800.0,
+        'advanced': 2400.0,
+    }
+    rating = models.FloatField(default=600.0)
 
     def save(self, *args, **kwargs):
         """
@@ -124,3 +131,7 @@ class Profile(models.Model):
         """
         self.rating = self.SKILL_LEVEL_RATINGS.get(self.skill_level, 600.0)
         super().save(*args, **kwargs)
+
+    def __str__(self):
+
+        return f"{self.user.username} - {self.skill_level} - {self.rating}"
