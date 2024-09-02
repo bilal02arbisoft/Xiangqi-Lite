@@ -5,14 +5,13 @@ from channels.db import database_sync_to_async
 from game.models import Game
 from game.serializers import GameSerializer
 from game.utils import hashids
-from users.models import CustomUser
+from users.models import CustomUser, Player
 
 
 async def route_event(consumer, data):
     event_type = data.get('type')
     handlers = {
         'game.get': handle_game_get,
-        'game.users.list': handle_game_users_list,
         'game.join': handle_game_join,
         'game.move': handle_game_move,
         'game.chat': handle_game_chat,
@@ -26,13 +25,14 @@ async def route_event(consumer, data):
 async def handle_game_chat(consumer, data):
     chat_message = data.get('message')
     if not chat_message:
-        await notify(consumer, consumer.channel_name, {'type': 'error', 'message': 'No message provided.'})
+        await notify(consumer, consumer.channel_name, {'type': 'error',
+                                                       'message': 'No message provided.'})
 
         return
 
     message_data = {
         'type': 'game.chat',
-        'username': consumer.scope['user'].username,  # Assuming the username is stored in the scope
+        'username': consumer.scope['user'].username,
         'message': chat_message,
         'timestamp': datetime.now().isoformat()
     }
@@ -59,56 +59,46 @@ async def handle_game_join(consumer, data):
     if not game_data:
 
         return
+
     if game_data['red_player'] and game_data['black_player']:
+
         role = 'viewer'
     else:
         role = 'player'
 
     consumer.scope['role'] = role
-    player_username = consumer.scope['user'].username
+
+    player = await get_or_create_player(consumer.scope['user'])
+
     if role == 'viewer':
-        await add_viewer(consumer.game_id, consumer.scope['user'].username)
-        # Use existing notify function to inform all clients in the room group
+        await add_viewer(consumer.game_id, player.user.username)
         await notify(
             consumer,
             consumer.room_group_name,
             {
                 'type': 'game.viewer.joined',
-                'username': consumer.scope['user'].username
+                'username': player.user.username
             },
             is_group=True
         )
     elif not game_data['red_player']:
 
-        await update_game_players(consumer.game_id, red_player_username=player_username)
+        await update_game_players(consumer.game_id, red_player=player)
     elif not game_data['black_player']:
-
-        game_usernames = await update_game_players(consumer.game_id, black_player_username=player_username)
-        game = await get_game_details(consumer.game_id)
+        game_usernames = await update_game_players(consumer.game_id, black_player=player)
         await notify(consumer, consumer.lobby_group_name, {
             'type': 'lobby.game.join',
             'game_id': consumer.game_id,
             'red_player': game_usernames['red_player'],
             'black_player': game_usernames['black_player'],
         }, is_group=True)
-        await handle_game_start(consumer, game, game_usernames)
-    else:
-
-        await notify(consumer, consumer.channel_name, {'type': 'error', 'message': 'This game is already full.'})
+        await handle_game_start(consumer)
 
 
-async def handle_game_start(consumer, game, game_usernames):
-
-    # Include initial timer values
+async def handle_game_start(consumer):
     await notify(consumer, consumer.room_group_name, {
         'type': 'game.start',
         'message': f'The game {consumer.game_id} has started!',
-        'red_player':  game_usernames['red_player'],
-        'black_player': game_usernames['black_player'],
-        'turn': 'red',
-        'red_time_remaining': game['red_time_remaining'],
-        'black_time_remaining': game['black_time_remaining'],
-        'server_time': datetime.now().timestamp()
     }, is_group=True)
 
 
@@ -116,15 +106,14 @@ async def handle_game_move(consumer, data):
     fen = data.get('fen')
     player = data.get('player')
     move = data.get('move')
-    thinking_time = data.get('thinking_time')  # Time in seconds that player took for the move
-
+    thinking_time = data.get('thinking_time')
     if not fen or not player or not move or thinking_time is None:
-        await notify(consumer, consumer.channel_name, {'type': 'error', 'message': 'Invalid move data received.'})
-        return
 
+        await notify(consumer, consumer.channel_name, {'type': 'error',
+                                                       'message': 'Invalid move data received.'})
+        return
     await update_game_state(consumer.game_id, fen, move, thinking_time)
     game_data = await get_game_details(consumer.game_id)
-
     await notify(
         consumer,
         consumer.room_group_name,
@@ -142,20 +131,26 @@ async def handle_game_move(consumer, data):
     )
 
 
-async def handle_game_users_list(consumer, data):
+async def game_users_list(consumer):
     game_id = consumer.game_id
     users = await get_game_users(game_id)
-    await notify(consumer, consumer.channel_name, {'type': 'game.users.list', 'data': users})
+    await notify(consumer, consumer.channel_name, {'type': 'game.users.list',
+                                                   'data': users})
 
 async def handle_game_get(consumer, data):
     game_id = data.get('id')
     game_data = await get_game_or_error(consumer, game_id)
     if game_data:
 
-        await notify(consumer, consumer.channel_name, {'type': 'game.get', 'data': game_data})
+        await notify(consumer, consumer.channel_name, {'type': 'game.get.success',
+                                                       'data': game_data})
+
+        await game_users_list(consumer)
+
 
 async def notify(consumer, target, message_data, is_group=False, exclude_channel=None):
     if is_group:
+
         if exclude_channel:
 
             await consumer.channel_layer.group_send(
@@ -182,10 +177,19 @@ async def get_game_or_error(consumer, game_id):
     game_data = await get_game_details(game_id)
     if not game_data:
 
-        await notify(consumer, consumer.channel_name, {'type': 'error', 'message': 'Game not found.'})
+        await notify(consumer, consumer.channel_name, {'type': 'error',
+                                                       'message': 'Game not found.'})
+
         return None
 
     return game_data
+
+@database_sync_to_async
+def get_or_create_player(user):
+    player, created = Player.objects.get_or_create(user=user)
+
+    return player
+
 
 @database_sync_to_async
 def update_game_state(game_id, fen, move, thinking_time):
@@ -195,14 +199,41 @@ def update_game_state(game_id, fen, move, thinking_time):
     game.add_move(move, thinking_time)
     game.save()
 
+
 @database_sync_to_async
 def get_game_users(game_id):
     decoded_id = hashids.decode(game_id)
-    game = Game.objects.get(id=decoded_id[0])
-    return {
-        'red_player': game.red_player.username if game.red_player else None,
-        'black_player': game.black_player.username if game.black_player else None
-    }
+
+    game = Game.objects.select_related('red_player__user', 'red_player__user__profile',
+                                       'black_player__user', 'black_player__user__profile').get(id=decoded_id[0])
+
+    users = []
+
+    if game.red_player:
+        red_player_details = {
+            'username': game.red_player.user.username,
+            'profile_picture': (game.red_player.user.profile.profile_picture
+                                if game.red_player.user.profile.profile_picture else None),
+            'id': game.red_player.user.id,
+            'country': game.red_player.user.profile.country,
+            'rating': game.red_player.rating
+        }
+        users.append(red_player_details)
+
+    if game.black_player:
+        black_player_details = {
+            'username': game.black_player.user.username,
+            'profile_picture': (game.black_player.user.profile.profile_picture.url
+                                if game.black_player.user.profile.profile_picture else None),
+            'bio': game.black_player.user.profile.bio,
+            'id': game.black_player.user.id,
+            'country': game.black_player.user.profile.country,
+            'rating': game.black_player.rating
+        }
+        users.append(black_player_details)
+
+    return users
+
 
 @database_sync_to_async
 def get_game_details(game_id):
@@ -210,28 +241,31 @@ def get_game_details(game_id):
         decoded_id = hashids.decode(game_id)
         game = Game.objects.get(id=decoded_id[0])
         serializer = GameSerializer(game)
+
         return serializer.data
 
     except Game.DoesNotExist:
+
         return None
 
 @database_sync_to_async
-def update_game_players(game_id, red_player_username=None, black_player_username=None):
+def update_game_players(game_id, red_player=None, black_player=None):
     decoded_id = hashids.decode(game_id)
-    game = Game.objects.get(id=decoded_id[0])
+    game = Game.objects.select_related('red_player', 'black_player').get(id=decoded_id[0])
 
-    if red_player_username:
+    if red_player:
 
-        red_player = CustomUser.objects.get(username=red_player_username)
         game.red_player = red_player
-    if black_player_username:
 
-        black_player = CustomUser.objects.get(username=black_player_username)
+    if black_player:
+
         game.black_player = black_player
+
     game.save()
+
     return {
-        'red_player': game.red_player.username if game.red_player else None,
-        'black_player': game.black_player.username if game.black_player else None
+        'red_player': game.red_player.user.username if game.red_player else None,
+        'black_player': game.black_player.user.username if game.black_player else None
     }
 
 @database_sync_to_async
