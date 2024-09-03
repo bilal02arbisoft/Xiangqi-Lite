@@ -42,7 +42,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             await game_handler.route_event(self, data)
 
     async def send_message(self, event):
-        exclude_channel = event.get('exclude_channel')
+        exclude_channel = event.get('exclude_channel', None)
         if exclude_channel and exclude_channel == self.channel_name:
 
             return

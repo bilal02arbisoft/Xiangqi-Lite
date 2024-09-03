@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from channels.db import database_sync_to_async
 
@@ -25,18 +25,17 @@ async def route_event(consumer, data):
 async def handle_game_chat(consumer, data):
     chat_message = data.get('message')
     if not chat_message:
+
         await notify(consumer, consumer.channel_name, {'type': 'error',
                                                        'message': 'No message provided.'})
 
         return
-
     message_data = {
         'type': 'game.chat',
         'username': consumer.scope['user'].username,
         'message': chat_message,
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     }
-
     await notify(
         consumer,
         consumer.room_group_name,
@@ -45,44 +44,42 @@ async def handle_game_chat(consumer, data):
         exclude_channel=consumer.channel_name
     )
 
-
 async def handle_game_join(consumer, data):
     consumer.game_id = data.get('id')
     consumer.room_group_name = f'game_{consumer.game_id}'
-
     await consumer.channel_layer.group_add(
         consumer.room_group_name,
         consumer.channel_name
     )
-
     game_data = await get_game_or_error(consumer, consumer.game_id)
     if not game_data:
 
         return
-
     if game_data['red_player'] and game_data['black_player']:
 
         role = 'viewer'
     else:
         role = 'player'
-
     consumer.scope['role'] = role
-
     player = await get_or_create_player(consumer.scope['user'])
-
     if role == 'viewer':
-        await add_viewer(consumer.game_id, player.user.username)
+
+        username = await get_username(player)
+        await add_viewer(consumer.game_id, username)
+
+        new_viewer_details = await get_game_users(consumer.game_id, viewer=consumer.scope['user'])
         await notify(
             consumer,
             consumer.room_group_name,
             {
                 'type': 'game.viewer.joined',
-                'username': player.user.username
+                'data': new_viewer_details
             },
             is_group=True
         )
-    elif not game_data['red_player']:
+        await game_users_list(consumer, is_group=False)
 
+    elif not game_data['red_player']:
         await update_game_players(consumer.game_id, red_player=player)
     elif not game_data['black_player']:
         game_usernames = await update_game_players(consumer.game_id, black_player=player)
@@ -94,12 +91,12 @@ async def handle_game_join(consumer, data):
         }, is_group=True)
         await handle_game_start(consumer)
 
-
 async def handle_game_start(consumer):
     await notify(consumer, consumer.room_group_name, {
         'type': 'game.start',
         'message': f'The game {consumer.game_id} has started!',
     }, is_group=True)
+    await game_users_list(consumer, is_group=True)
 
 
 async def handle_game_move(consumer, data):
@@ -131,11 +128,11 @@ async def handle_game_move(consumer, data):
     )
 
 
-async def game_users_list(consumer):
+async def game_users_list(consumer, is_group=False):
     game_id = consumer.game_id
     users = await get_game_users(game_id)
-    await notify(consumer, consumer.channel_name, {'type': 'game.users.list',
-                                                   'data': users})
+    await notify(consumer, consumer.room_group_name,
+                 {'type': 'game.users.list', 'data': users}, is_group=is_group)
 
 async def handle_game_get(consumer, data):
     game_id = data.get('id')
@@ -144,8 +141,6 @@ async def handle_game_get(consumer, data):
 
         await notify(consumer, consumer.channel_name, {'type': 'game.get.success',
                                                        'data': game_data})
-
-        await game_users_list(consumer)
 
 
 async def notify(consumer, target, message_data, is_group=False, exclude_channel=None):
@@ -190,6 +185,11 @@ def get_or_create_player(user):
 
     return player
 
+@database_sync_to_async
+def get_username(player):
+
+    return player.user.username
+
 
 @database_sync_to_async
 def update_game_state(game_id, fen, move, thinking_time):
@@ -201,18 +201,30 @@ def update_game_state(game_id, fen, move, thinking_time):
 
 
 @database_sync_to_async
-def get_game_users(game_id):
+def get_game_users(game_id, viewer=None):
     decoded_id = hashids.decode(game_id)
 
     game = Game.objects.select_related('red_player__user', 'red_player__user__profile',
                                        'black_player__user', 'black_player__user__profile').get(id=decoded_id[0])
 
-    users = []
+    if viewer:
 
+        viewer_details = {
+            'username': viewer.username,
+            'profile_picture': (viewer.profile.profile_picture.url
+                                if viewer.profile.profile_picture else None),
+            'id': viewer.id,
+            'country': viewer.profile.country,
+            'rating': viewer.player.rating if hasattr(viewer, 'player') else None
+        }
+
+        return viewer_details
+
+    users = []
     if game.red_player:
         red_player_details = {
             'username': game.red_player.user.username,
-            'profile_picture': (game.red_player.user.profile.profile_picture
+            'profile_picture': (game.red_player.user.profile.profile_picture.url
                                 if game.red_player.user.profile.profile_picture else None),
             'id': game.red_player.user.id,
             'country': game.red_player.user.profile.country,
@@ -275,3 +287,16 @@ def add_viewer(game_id, username):
     user = CustomUser.objects.get(username=username)
     game.viewers.add(user)
     game.save()
+
+@database_sync_to_async
+def get_viewer_details(player):
+    user = player.user
+    viewer_details = {
+        'username': user.username,
+        'profile_picture': (user.profile.profile_picture.url
+                            if user.profile.profile_picture else None),
+        'id': user.id,
+        'country': user.profile.country,
+        'rating': player.rating  # Assuming the Player model has a rating field
+    }
+    return viewer_details
