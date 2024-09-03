@@ -21,8 +21,8 @@ class GameSerializer(serializers.ModelSerializer):
 
     def get_red_player(self, obj):
 
-        return obj.red_player.username if obj.red_player else None
+        return obj.red_player.user.username if obj.red_player else None
 
     def get_black_player(self, obj):
 
-        return obj.black_player.username if obj.black_player else None
+        return obj.black_player.user.username if obj.black_player else None
