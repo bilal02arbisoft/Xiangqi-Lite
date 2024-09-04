@@ -36,7 +36,7 @@ async def handle_game_chat(consumer, data):
         await send_error(consumer, 'No message provided.')
 
         return
-    message_data = create_message_data('game.chat', consumer.scope['user'].username, chat_message)
+    message_data = create_message_data('game.chat', consumer.scope['user'].id, chat_message)
     await notify(consumer, consumer.room_group_name, message_data, is_group=True, exclude_channel=consumer.channel_name)
 
 
@@ -156,13 +156,13 @@ async def send_error(consumer, message):
     await notify(consumer, consumer.channel_name, {'type': 'error', 'message': message})
 
 
-def create_message_data(event_type, username, message):
+def create_message_data(event_type, user_id, message):
     """
     Create message data for notifications.
     """
     return {
         'type': event_type,
-        'username': username,
+        'user_id': user_id,
         'message': message,
         'timestamp': datetime.now(timezone.utc).isoformat()
     }
@@ -347,5 +347,4 @@ def decode_game_id(game_id):
     """
     Decode the game ID.
     """
-
     return hashids.decode(game_id)[0]
