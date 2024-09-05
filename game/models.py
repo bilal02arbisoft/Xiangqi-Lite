@@ -19,8 +19,8 @@ class Game(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ongoing')
     started_at = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
-    red_time_remaining = models.IntegerField(default=600)
-    black_time_remaining = models.IntegerField(default=600)
+    red_time_remaining = models.IntegerField(default=300)
+    black_time_remaining = models.IntegerField(default=300)
     viewers = models.ManyToManyField(CustomUser, related_name='viewers', blank=True)
 
     def add_move(self, uci_move, thinking_time):
