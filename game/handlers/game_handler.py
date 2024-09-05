@@ -18,6 +18,7 @@ async def route_event(consumer, data):
         'game.join': handle_game_join,
         'game.move': handle_game_move,
         'game.chat': handle_game_chat,
+        'game.end': handle_game_end,
     }
 
     handler = handlers.get(event_type)
@@ -212,6 +213,69 @@ async def get_game_or_error(consumer, game_id):
     return game_data
 
 
+async def handle_game_end(consumer, data):
+    """
+    Handle a game end event.
+    """
+    losing_username = data.get('losing_player')
+
+    if not losing_username:
+        await send_error(consumer, 'Invalid data: No losing username provided.')
+        return
+
+    game_data = await get_game_or_error(consumer, consumer.game_id)
+    if not game_data:
+        return
+
+    losing_player = await get_player_by_username(losing_username)
+    if not losing_player:
+        await send_error(consumer, 'Losing player not found.')
+        return
+
+    winning_player = None
+
+    if game_data['red_player'] == losing_username:
+        winning_player = await get_player_by_username(game_data['black_player'])
+    elif game_data['black_player'] == losing_username:
+        winning_player = await get_player_by_username(game_data['red_player'])
+
+    if not winning_player:
+        await send_error(consumer, 'Winning player not found.')
+        return
+
+    await end_game_update(consumer.game_id, winning_player, losing_player)
+
+    winning_username = await database_sync_to_async(lambda: winning_player.user.username)()
+
+    await notify(
+        consumer,
+        consumer.room_group_name,
+        {'type': 'game.end.success', 'message':  winning_username},
+        is_group=True
+    )
+
+
+@database_sync_to_async
+def end_game_update(game_id, winning_player, losing_player):
+    """
+    Update game status to completed and update player statistics.
+    """
+    game = Game.objects.get(id=decode_game_id(game_id))
+
+    game.status = 'completed'
+    game.save()
+
+    winning_player.games_played += 1
+    winning_player.games_won += 1
+    winning_player.rating += 20
+    winning_player.save()
+
+    losing_player.games_played += 1
+    losing_player.games_lost += 1
+    losing_player.rating -= 20
+    losing_player.save()
+
+
 @database_sync_to_async
 def get_or_create_player(user):
     """
@@ -229,7 +293,6 @@ def get_username(player):
 
     return player.user.username
 
-
 @database_sync_to_async
 def update_game_state(game_id, fen, move, thinking_time):
     """
@@ -239,6 +302,18 @@ def update_game_state(game_id, fen, move, thinking_time):
     game.fen = fen
     game.add_move(move, thinking_time)
     game.save()
+
+@database_sync_to_async
+def get_player_by_username(username):
+    """
+    Retrieve a Player instance by username.
+    """
+    try:
+        user = CustomUser.objects.get(username=username)
+        return Player.objects.get(user=user)
+    except (CustomUser.DoesNotExist, Player.DoesNotExist):
+        return None
+
 
 @database_sync_to_async
 def get_game_users_sync(game_id):
