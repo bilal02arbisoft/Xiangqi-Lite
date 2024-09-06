@@ -15,13 +15,10 @@ class UnauthorizedError(Exception):
 
 
 def exception_handler(func):
-    from game.handlers.game_handler import send_error
-
     @functools.wraps(func)
     async def wrapper(consumer, *args, **kwargs):
-
+        from game.handlers.game_handler import send_error
         try:
-
             return await func(consumer, *args, **kwargs)
         except GameNotFoundError as e:
             await send_error(consumer, str(e))
