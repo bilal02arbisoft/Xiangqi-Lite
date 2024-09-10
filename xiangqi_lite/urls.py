@@ -25,8 +25,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),
     re_path(r'^.*$', NotFoundAPIView.as_view(), name='not-found'),
-
-
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

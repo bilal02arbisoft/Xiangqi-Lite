@@ -9,7 +9,6 @@ class CustomUserAdmin(BaseUserAdmin):
     """
     Custom admin panel configuration for the CustomUser model.
     """
-
     list_display = ('username', 'email', 'is_staff', 'is_active', 'is_email_verified')
     list_filter = ('is_staff', 'is_active', 'is_email_verified')
 

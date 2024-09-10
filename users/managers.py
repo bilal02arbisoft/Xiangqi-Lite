@@ -7,7 +7,6 @@ class CustomUserManager(BaseUserManager):
     """
     Custom manager for CustomUser model with methods to create users and superusers.
     """
-
     @handle_exceptions
     def create_user(self, email, username, password=None, **extra_fields):
         """
@@ -19,7 +18,6 @@ class CustomUserManager(BaseUserManager):
         if not email:
 
             raise ValueError('The Email field must be set')
-
         email = self.normalize_email(email)
         user = self.model(email=email, username=username, **extra_fields)
         user.set_password(password)
@@ -34,7 +32,6 @@ class CustomUserManager(BaseUserManager):
         """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-
         if extra_fields.get('is_staff') is not True:
 
             raise ValueError('Superuser must have is_staff=True')
