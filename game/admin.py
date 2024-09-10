@@ -35,5 +35,4 @@ class GameAdmin(admin.ModelAdmin):
 
         return []
 
-
 admin.site.register(Game, GameAdmin)

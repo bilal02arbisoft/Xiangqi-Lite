@@ -64,9 +64,9 @@ async def handle_game_join(consumer, data):
     player = await get_or_create_player(consumer.scope['user'])
     if consumer.scope['role'] == 'viewer':
 
-        await handle_viewer_join(consumer, player)
-    else:
-        await handle_player_join(consumer, game_data, player)
+        return await handle_viewer_join(consumer, player)
+
+    await handle_player_join(consumer, game_data, player)
 
 @exception_handler
 async def handle_viewer_join(consumer, player):
@@ -248,6 +248,7 @@ async def notify(consumer, target, message_data, is_group=False, exclude_channel
     if is_group:
 
         return await consumer.channel_layer.group_send(target, payload)
+
     await consumer.send_message({'message_data': message_data})
 
 async def get_game_or_error(game_id):

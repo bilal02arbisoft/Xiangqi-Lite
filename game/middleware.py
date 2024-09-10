@@ -26,6 +26,7 @@ class JWTAuthMiddleware:
             scope['user'] = await self.get_user(data['user_id'])
 
         except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError):
+
             scope['user'] = AnonymousUser()
 
         return await self.app(scope, receive, send)
@@ -36,10 +37,8 @@ class JWTAuthMiddleware:
         Return the user based on user ID.
         """
         try:
-
             return User.objects.get(id=user_id)
         except User.DoesNotExist:
-
             return AnonymousUser()
 
 def JWTAuthMiddlewareStack(app):
