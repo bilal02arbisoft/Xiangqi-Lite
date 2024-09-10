@@ -247,9 +247,8 @@ async def notify(consumer, target, message_data, is_group=False, exclude_channel
 
     if is_group:
 
-        await consumer.channel_layer.group_send(target, payload)
-    else:
-        await consumer.send_message({'message_data': message_data})
+        return await consumer.channel_layer.group_send(target, payload)
+    await consumer.send_message({'message_data': message_data})
 
 async def get_game_or_error(game_id):
     game_data = await get_game_details(game_id)
@@ -272,5 +271,4 @@ def determine_role(game_data):
     """
     Determine the role of a user in a game (player or viewer).
     """
-
     return 'viewer' if game_data['red_player'] and game_data['black_player'] else 'player'

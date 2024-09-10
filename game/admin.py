@@ -7,7 +7,6 @@ class GameAdmin(admin.ModelAdmin):
     """
     Admin configuration for the Game model.
     """
-
     list_display = ('id', 'red_player', 'black_player', 'status', 'turn', 'started_at', 'last_updated')
     list_filter = ('status', 'turn', 'started_at', 'last_updated')
     search_fields = ('red_player__user__username', 'black_player__user__username', 'status')
@@ -31,7 +30,9 @@ class GameAdmin(admin.ModelAdmin):
         Make certain fields read-only in the admin interface based on the object's state.
         """
         if obj:
+
             return ['started_at', 'last_updated']
+
         return []
 
 
