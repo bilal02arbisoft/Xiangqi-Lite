@@ -49,10 +49,10 @@ def handle_exceptions(func):
 
             return Response({'error': 'Value error', 'details': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        except Exception as e :
-                logger.exception('Unhandled exception',e)
+        except Exception as e:
+                logger.exception(e)
 
-                return Response({'error': 'An unexpected error occurred'},
+                return Response({'error': 'An unexpected error occurred', 'details': str(e)},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return wrapper
