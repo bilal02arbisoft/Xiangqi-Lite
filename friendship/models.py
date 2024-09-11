@@ -1,3 +1,4 @@
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -15,8 +16,13 @@ class FriendRequest(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
 
+
     class Meta:
         unique_together = ('from_user', 'to_user')
+        indexes = [
+            models.Index(fields=['from_user']),
+            models.Index(fields=['to_user']),
+        ]
 
     def accept(self):
         self.status = 'accepted'
@@ -36,3 +42,7 @@ class Friendship(models.Model):
 
     class Meta:
         unique_together = ('user1', 'user2')
+        indexes = [
+            models.Index(fields=['user1']),
+            models.Index(fields=['user2']),
+        ]
