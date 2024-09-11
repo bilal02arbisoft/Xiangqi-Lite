@@ -13,6 +13,8 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
         """Initialize the consumer with the default settings."""
         super().__init__(*args, **kwargs)
         self.lobby_group_name = None
+        self.room_group_name = None
+
 
     async def connect(self):
         """
@@ -35,9 +37,14 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
         Removes the WebSocket connection from the group upon disconnection.
         """
         if self.lobby_group_name:
-
             await self.channel_layer.group_discard(
                 self.lobby_group_name,
+                self.channel_name
+            )
+
+        if self.room_group_name:
+            await self.channel_layer.group_discard(
+                self.room_group_name,
                 self.channel_name
             )
 
