@@ -6,6 +6,10 @@ from users.serializers import CustomUserSerializer as UserSerializer
 
 
 class FriendRequestSerializer(serializers.ModelSerializer):
+    """
+    Serializer for displaying FriendRequest objects.
+    Serializes 'from_user' and 'to_user' using the CustomUserSerializer,
+    """
     from_user = UserSerializer()
     to_user = UserSerializer()
 
@@ -15,6 +19,10 @@ class FriendRequestSerializer(serializers.ModelSerializer):
 
 
 class FriendshipSerializer(serializers.ModelSerializer):
+    """
+    Serializer for displaying Friendship objects.
+    Serializes 'user1' and 'user2' using the CustomUserSerializer.
+    """
     user1 = UserSerializer()
     user2 = UserSerializer()
 
@@ -24,6 +32,10 @@ class FriendshipSerializer(serializers.ModelSerializer):
 
 
 class FriendRequestCreateSerializer(serializers.Serializer):
+    """
+    Serializer for creating a new friend request.
+     Validates the 'username' field to ensure the user cannot send a request to themselves,
+    """
     username = serializers.CharField()
 
     def validate_username(self, value):
@@ -43,6 +55,11 @@ class FriendRequestCreateSerializer(serializers.Serializer):
 
 
 class FriendRequestActionSerializer(serializers.Serializer):
+    """
+    Serializer for handling actions on a friend request (accept/reject).
+    Validates the 'from_user' and 'action' fields, and checks whether the action
+     has already been performed on the friend request.
+    """
     from_user = serializers.CharField()
     action = serializers.ChoiceField(choices=['accepted', 'rejected'])
 
