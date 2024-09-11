@@ -292,7 +292,6 @@ class VerifyOtpView(BaseAPIView):
         if serializer.is_valid():
 
             serializer.save()
-            request.user.send_verify_email()
 
             return Response({'message': 'Email verified successfully'}, status=status.HTTP_200_OK)
 
