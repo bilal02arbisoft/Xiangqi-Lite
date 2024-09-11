@@ -40,15 +40,12 @@ class SendFriendRequestView(BaseFriendRequestView):
     POST request to create a friend request to the user specified by the 'username' field.
     Returns a message indicating whether the request was created or already exists.
     """
-
     @handle_exceptions
     def post(self, request, *args, **kwargs):
         serializer = FriendRequestCreateSerializer(data=request.data, context={'request': request})
-
         if not serializer.is_valid():
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         username = serializer.validated_data['username']
         to_user = User.objects.get(username=username)
         friend_request, created = FriendRequest.objects.get_or_create(from_user=request.user, to_user=to_user)
@@ -68,14 +65,11 @@ class AcceptRejectFriendRequestView(BaseFriendRequestView):
     @handle_exceptions
     def post(self, request, *args, **kwargs):
         serializer = FriendRequestActionSerializer(data=request.data, context={'request': request})
-
         if not serializer.is_valid():
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         friend_request = serializer.context['friend_request']
         action = serializer.validated_data['action']
-
         if action == 'accepted':
             friend_request.accept()
 
@@ -144,7 +138,6 @@ class SearchUsersView(BaseAPIView):
         if query:
 
             users = User.objects.filter(username__icontains=query).exclude(id=request.user.id)
-
             serializer = CustomUserSerializer(users, many=True)
 
             return Response(serializer.data, status=status.HTTP_200_OK)
