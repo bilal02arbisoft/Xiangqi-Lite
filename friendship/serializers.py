@@ -41,11 +41,9 @@ class FriendRequestCreateSerializer(serializers.Serializer):
     def validate_username(self, value):
         request_user = self.context['request'].user
         to_user = User.objects.get(username=value)
-
         if to_user == request_user:
 
             raise serializers.ValidationError('You cannot send a friend request to yourself.')
-
         if Friendship.objects.filter(user1=request_user, user2=to_user).exists() or \
            Friendship.objects.filter(user1=to_user, user2=request_user).exists():
 
