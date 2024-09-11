@@ -27,7 +27,6 @@ class CustomUserAdmin(BaseUserAdmin):
             'fields': ('username', 'email', 'password1', 'password2'),
         }),
     )
-
     search_fields = ('email', 'username')
     ordering = ('email',)
 

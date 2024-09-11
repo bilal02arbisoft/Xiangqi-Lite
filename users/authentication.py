@@ -28,5 +28,9 @@ class UsernameOrEmailBackend(ModelBackend):
 
             return CustomUser.objects.get(email=identifier)
         except CustomUser.DoesNotExist:
+            try:
 
-            return CustomUser.objects.get(username=identifier)
+                return CustomUser.objects.get(username=identifier)
+            except CustomUser.DoesNotExist:
+
+                return None

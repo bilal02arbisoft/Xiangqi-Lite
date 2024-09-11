@@ -46,9 +46,9 @@ def handle_exceptions(func):
 
             return Response({'error': 'Value error', 'details': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        except Exception as e:
+        except Exception :
 
-                return Response({'error': 'An unexpected error occurred', 'details': str(e)},
+                return Response({'error': 'An unexpected error occurred'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return wrapper
