@@ -44,6 +44,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
+    class Meta:
+        indexes = [
+            models.Index(fields=['username']),
+            models.Index(fields=['email']),
+        ]
+
 
     def __str__(self):
 
@@ -102,6 +108,7 @@ class Profile(models.Model):
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     bio = models.TextField(max_length=500, null=True, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
+
 
 
 class Player(models.Model):
