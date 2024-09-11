@@ -1,6 +1,5 @@
 from django.contrib.auth.backends import ModelBackend
 
-from users.error_handling import handle_exceptions
 from users.models import CustomUser
 
 
@@ -8,7 +7,7 @@ class UsernameOrEmailBackend(ModelBackend):
     """
     Custom authentication backend to allow login with either username or email.
     """
-    @handle_exceptions
+
     def authenticate(self, request, username=None, password=None, **kwargs):
         """
         Authenticate a user based on either email or username and password.

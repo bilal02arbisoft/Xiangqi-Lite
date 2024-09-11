@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'channels',
     'game.apps.GameConfig',
+    'friendship.apps.FriendshipConfig',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',

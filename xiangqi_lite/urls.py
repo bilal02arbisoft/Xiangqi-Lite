@@ -25,8 +25,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),
     path('game/', include('game.urls')),
+    path('friendship/', include('friendship.urls')),
     re_path(r'^.*$', NotFoundAPIView.as_view(), name='not-found'),
-
 
 ]
 if settings.DEBUG:
