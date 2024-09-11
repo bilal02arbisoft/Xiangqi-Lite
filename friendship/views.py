@@ -1,16 +1,11 @@
-from error_handling import handle_exceptions
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from friendship.error_handling import handle_exceptions
 from friendship.models import FriendRequest, Friendship
-from friendship.serializers import (
-    FriendRequestActionSerializer,
-    FriendRequestCreateSerializer,
-    FriendRequestSerializer,
-    FriendshipSerializer,
-)
+from friendship.serializers import FriendRequestActionSerializer, FriendRequestCreateSerializer, FriendRequestSerializer
 from users.models import CustomUser as User
 from users.serializers import CustomUserSerializer
 
@@ -104,7 +99,7 @@ class ListSentFriendRequestsView(BaseAPIView):
         requests = FriendRequest.objects.filter(from_user=request.user)
         if not requests.exists():
 
-            return Response({'message': 'No friend requests sent.'}, status=status.HTTP_204_NO_CONTENT)
+            return Response({'message': 'No friend requests sent.'}, status=status.HTTP_200_OK)
 
         serializer = FriendRequestSerializer(requests, many=True)
 
@@ -117,8 +112,10 @@ class ListFriendsView(BaseAPIView):
     """
     @handle_exceptions
     def get(self, request, *args, **kwargs):
-        friendships = Friendship.objects.filter(user1=request.user)
-        serializer = FriendshipSerializer(friendships, many=True)
+        user2_ids = Friendship.objects.filter(user1=request.user).values_list('user2', flat=True)
+        user2_objects = User.objects.filter(id__in=user2_ids)
+
+        serializer = CustomUserSerializer(user2_objects, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
