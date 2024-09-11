@@ -193,13 +193,11 @@ class PasswordChangeView(BaseAPIView):
     """
     View to handle password change for authenticated users.
     """
-
     @handle_exceptions
     def get_object(self):
         """
         Retrieve the authenticated user object.
         """
-
         return
 
     @handle_exceptions
@@ -235,7 +233,6 @@ class RequestOtpView(BaseAPIView):
     """
     View to handle sending an OTP to the user's email. Requires authentication.
     """
-
     @handle_exceptions
     def post(self, request, *args, **kwargs):
         user_email = {'email': request.user.email}
@@ -252,7 +249,6 @@ class VerifyOtpView(BaseAPIView):
     """
     View to handle OTP verification. Requires authentication.
     """
-
     @handle_exceptions
     def post(self, request, *args, **kwargs):
         user_email = request.user.email
