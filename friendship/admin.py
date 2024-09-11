@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import FriendRequest, Friendship
+
+from friendship.models import FriendRequest, Friendship
+
 
 class FriendRequestAdmin(admin.ModelAdmin):
     list_display = ('from_user', 'to_user', 'status', 'timestamp')

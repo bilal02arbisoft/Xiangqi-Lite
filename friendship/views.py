@@ -1,131 +1,127 @@
-from rest_framework.response import Response
+from error_handling import handle_exceptions
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.core.exceptions import ObjectDoesNotExist
-from users.models import CustomUser as User
+
 from friendship.models import FriendRequest, Friendship
+from friendship.serializers import (
+    FriendRequestActionSerializer,
+    FriendRequestCreateSerializer,
+    FriendRequestSerializer,
+    FriendshipSerializer,
+)
+from users.models import CustomUser as User
 from users.serializers import CustomUserSerializer
 
 
-class SendFriendRequestView(APIView):
+class BaseAPIView(APIView):
+    """
+    Base API view that requires authentication.
+    """
     permission_classes = [IsAuthenticated]
 
+
+class BaseFriendRequestView(BaseAPIView):
+    """
+    Base class for handling friend request-specific logic.
+    """
+    def get_user(self, username):
+        """
+        Helper method to fetch a user by username.
+        """
+        return User.objects.get(username=username)
+
+    def get_friend_request(self, from_user, to_user):
+        """
+        Helper method to fetch a friend request.
+        """
+        return FriendRequest.objects.get(from_user=from_user, to_user=to_user)
+
+
+class SendFriendRequestView(BaseFriendRequestView):
+
+    @handle_exceptions
     def post(self, request, *args, **kwargs):
-        username = request.data.get('username')
-        if not username:
+        serializer = FriendRequestCreateSerializer(data=request.data, context={'request': request})
 
-            return Response({'error': 'Username is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
 
-        try:
-            to_user = User.objects.get(username=username)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            if to_user == request.user:
+        username = serializer.validated_data['username']
+        to_user = User.objects.get(username=username)
+        friend_request, created = FriendRequest.objects.get_or_create(from_user=request.user, to_user=to_user)
 
-                return Response({'error': 'You cannot send a friend request to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'message': 'Friend request sent!' if created else 'Friend request already sent.'},
+            status=status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST
+        )
 
-            if Friendship.objects.filter(user1=request.user, user2=to_user).exists() or \
-               Friendship.objects.filter(user1=to_user, user2=request.user).exists():
 
-                return Response({'error': 'You are already friends with this user.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            friend_request, created = FriendRequest.objects.get_or_create(from_user=request.user, to_user=to_user)
-            if created:
+class AcceptRejectFriendRequestView(BaseFriendRequestView):
 
-                return Response({'message': 'Friend request sent!'}, status=status.HTTP_201_CREATED)
-            else:
-
-                return Response({'message': 'Friend request already sent.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        except User.DoesNotExist:
-
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-class AcceptFriendRequestView(APIView):
-    permission_classes = [IsAuthenticated]
-
+    @handle_exceptions
     def post(self, request, *args, **kwargs):
-        from_username = request.data.get('from_user')
-        if not from_username:
-            return Response({'error': 'From user is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = FriendRequestActionSerializer(data=request.data, context={'request': request})
 
-        try:
-            from_user = User.objects.get(username=from_username)
-            friend_request = FriendRequest.objects.get(from_user=from_user, to_user=request.user)
-            if friend_request.status == 'accepted':
-                return Response({'message': 'Friend request already accepted.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
 
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        friend_request = serializer.context['friend_request']
+        action = serializer.validated_data['action']
+
+        if action == 'accepted':
             friend_request.accept()
+
             return Response({'message': 'Friend request accepted!'}, status=status.HTTP_200_OK)
-
-        except ObjectDoesNotExist:
-            return Response({'error': 'Friend request not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-
-class RejectFriendRequestView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        from_username = request.data.get('from_user')
-        if not from_username:
-            return Response({'error': 'From user is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            from_user = User.objects.get(username=from_username)
-            friend_request = FriendRequest.objects.get(from_user=from_user, to_user=request.user)
-            if friend_request.status == 'rejected':
-                return Response({'message': 'Friend request already rejected.'}, status=status.HTTP_400_BAD_REQUEST)
+        elif action == 'rejected':
 
             friend_request.reject()
+
             return Response({'message': 'Friend request rejected!'}, status=status.HTTP_200_OK)
 
-        except ObjectDoesNotExist:
-            return Response({'error': 'Friend request not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
-class ListSentFriendRequestsView(APIView):
-    permission_classes = [IsAuthenticated]
-
+class ListSentFriendRequestsView(BaseAPIView):
+    """
+    Inherits only the permission requirement from BaseAPIView.
+    """
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
         requests = FriendRequest.objects.filter(from_user=request.user)
         if not requests.exists():
-            return Response({'message': 'No friend requests sent.'}, status=status.HTTP_200_OK)
 
-        request_data = [{"to_user": fr.to_user.username, "status": fr.status, "timestamp": fr.timestamp} for fr in
-                        requests]
-        return Response(request_data, status=status.HTTP_200_OK)
+            return Response({'message': 'No friend requests sent.'}, status=status.HTTP_204_NO_CONTENT)
 
+        serializer = FriendRequestSerializer(requests, many=True)
 
-class ListFriendsView(APIView):
-    permission_classes = [IsAuthenticated]
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+class ListFriendsView(BaseAPIView):
+
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
         friendships = Friendship.objects.filter(user1=request.user)
+        serializer = FriendshipSerializer(friendships, many=True)
 
-        friends_data = []
-        for friendship in friendships:
-            friend = friendship.user2
-            friend_data = CustomUserSerializer(friend).data
-            friend_data['since'] = friendship.created
-            friends_data.append(friend_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(friends_data, status=status.HTTP_200_OK)
+class FriendRequestsView(BaseAPIView):
 
-class FriendRequestsView(APIView):
-    permission_classes = [IsAuthenticated]
-
+    @handle_exceptions
     def get(self, request):
         friend_requests = FriendRequest.objects.filter(to_user=request.user, status='pending')
-        serialized_requests = [
-            CustomUserSerializer(request.from_user).data
-            for request in friend_requests
-        ]
+        serializer = FriendRequestSerializer(friend_requests, many=True)
 
-        return Response(serialized_requests)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SearchUsersView(APIView):
-    permission_classes = [IsAuthenticated]
+class SearchUsersView(BaseAPIView):
 
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
         query = request.GET.get('query', '')
         if query:
@@ -136,5 +132,4 @@ class SearchUsersView(APIView):
 
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response({"detail": "No query provided."}, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response({'detail': 'No query provided.'}, status=status.HTTP_400_BAD_REQUEST)
