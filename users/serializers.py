@@ -28,7 +28,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     @staticmethod
-    @handle_exceptions
     def validate_email(value):
         """
         Validate that the email is unique.
@@ -40,7 +39,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return value
 
     @staticmethod
-    @handle_exceptions
     def validate_username(value):
         """
         Validate that the username is unique.
@@ -52,7 +50,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return value
 
     @staticmethod
-    @handle_exceptions
     def validate_password(value):
         """
         Validate that the password meets all security requirements.
@@ -73,7 +70,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
         return data
 
-    @handle_exceptions
+
     def create(self, validated_data):
         """
         Create a new user and associated profile.
@@ -118,7 +115,6 @@ class PasswordChangeSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
 
     @staticmethod
-    @handle_exceptions
     def validate_new_password(value):
         """
         Validate the new password.
@@ -127,7 +123,6 @@ class PasswordChangeSerializer(serializers.Serializer):
 
         return value
 
-    @handle_exceptions
     def validate(self, data):
         """
         Validate the old and new passwords.
@@ -155,7 +150,6 @@ class RequestOtpSerializer(serializers.Serializer):
     """
     email = serializers.EmailField()
 
-    @handle_exceptions
     def validate_email(self, value):
         """
         Validate that the email exists in the system.
@@ -166,7 +160,7 @@ class RequestOtpSerializer(serializers.Serializer):
 
         return value
 
-    @handle_exceptions
+
     def save(self):
         """
         Generate and send OTP to the user's email.
@@ -185,7 +179,6 @@ class VerifyOtpSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)
 
-    @handle_exceptions
     def validate(self, data):
         """
         Validate the OTP and email combination.
@@ -197,7 +190,6 @@ class VerifyOtpSerializer(serializers.Serializer):
 
         return data
 
-    @handle_exceptions
     def save(self):
         """
         Mark the user's email as verified.

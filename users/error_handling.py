@@ -1,11 +1,9 @@
 from functools import wraps
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
-from rest_framework import serializers, status
+from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError, PermissionDenied
-from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 
 
@@ -20,21 +18,9 @@ def handle_exceptions(func):
 
             return func(*args, **kwargs)
 
-        except (DRFValidationError, DjangoValidationError) as e:
-
-            if 'request' in kwargs or 'view' in kwargs:
-
-                return Response({'error': 'Invalid input data', 'details': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                raise serializers.ValidationError(e.messages if hasattr(e, 'messages') else str(e))
-
         except ObjectDoesNotExist as e:
 
-            if 'request' in kwargs or 'view' in kwargs:
-
-                return Response({'error': 'Resource not found', 'details': str(e)}, status=status.HTTP_404_NOT_FOUND)
-            else:
-                raise serializers.ValidationError('The requested object does not exist.')
+         return Response({'error': 'Resource not found', 'details': str(e)}, status=status.HTTP_404_NOT_FOUND)
 
         except PermissionDenied as e:
 
@@ -54,19 +40,15 @@ def handle_exceptions(func):
 
         except IntegrityError:
 
-            raise serializers.ValidationError('A database integrity error occurred.')
+            return Response({'error': 'A database integrity error occurred'}, status=status.HTTP_400_BAD_REQUEST)
 
         except ValueError as e:
 
-            raise ValueError(str(e))
+            return Response({'error': 'Value error', 'details': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
 
-            if 'request' in kwargs or 'view' in kwargs:
-
                 return Response({'error': 'An unexpected error occurred', 'details': str(e)},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            else:
-                raise Exception(f"An error occurred: {e}")
 
     return wrapper
