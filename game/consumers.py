@@ -10,7 +10,6 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
     Handles WebSocket connections for real-time  events.
     """
     def __init__(self, *args, **kwargs):
-        """Initialize the consumer with the default settings."""
         super().__init__(*args, **kwargs)
         self.lobby_group_name = None
 
@@ -26,6 +25,7 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
                 self.lobby_group_name,
                 self.channel_name
             )
+
             return await self.accept()
 
         await self.close()

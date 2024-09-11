@@ -52,4 +52,5 @@ class Game(models.Model):
         """
         Returns the encoded game ID using Hashids.
         """
+
         return hashids.encode(self.id)
