@@ -40,6 +40,11 @@ class BaseFriendRequestView(BaseAPIView):
 
 
 class SendFriendRequestView(BaseFriendRequestView):
+    """
+    View to handle sending a friend request.
+    POST request to create a friend request to the user specified by the 'username' field.
+    Returns a message indicating whether the request was created or already exists.
+    """
 
     @handle_exceptions
     def post(self, request, *args, **kwargs):
@@ -59,9 +64,12 @@ class SendFriendRequestView(BaseFriendRequestView):
         )
 
 
-
 class AcceptRejectFriendRequestView(BaseFriendRequestView):
-
+    """
+    View to handle accepting or rejecting a friend request.
+     POST request with the 'from_user' and 'action' fields (either 'accepted' or 'rejected').
+    Performs the specified action on the friend request and returns an appropriate message.
+    """
     @handle_exceptions
     def post(self, request, *args, **kwargs):
         serializer = FriendRequestActionSerializer(data=request.data, context={'request': request})
@@ -87,7 +95,9 @@ class AcceptRejectFriendRequestView(BaseFriendRequestView):
 
 class ListSentFriendRequestsView(BaseAPIView):
     """
-    Inherits only the permission requirement from BaseAPIView.
+    View to list all friend requests sent by the current user.
+    GET request returns a list of all friend requests initiated by the current user.
+    If no requests have been sent, returns an appropriate message.
     """
     @handle_exceptions
     def get(self, request, *args, **kwargs):
@@ -101,7 +111,10 @@ class ListSentFriendRequestsView(BaseAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ListFriendsView(BaseAPIView):
-
+    """
+    View to list all friends of the current user.
+    GET request returns a list of all friendships where the current user is one of the participants.
+    """
     @handle_exceptions
     def get(self, request, *args, **kwargs):
         friendships = Friendship.objects.filter(user1=request.user)
@@ -110,7 +123,10 @@ class ListFriendsView(BaseAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class FriendRequestsView(BaseAPIView):
-
+    """
+    View to list all pending friend requests for the current user.
+    GET request returns all friend requests received by the current user that are in the 'pending' state.
+    """
     @handle_exceptions
     def get(self, request):
         friend_requests = FriendRequest.objects.filter(to_user=request.user, status='pending')
@@ -120,7 +136,11 @@ class FriendRequestsView(BaseAPIView):
 
 
 class SearchUsersView(BaseAPIView):
-
+    """
+     View to search for users based on a query.
+     GET request takes a 'query' parameter and returns a list of users whose usernames contain the query string,
+     excluding the current user.
+     """
     @handle_exceptions
     def get(self, request, *args, **kwargs):
         query = request.GET.get('query', '')
