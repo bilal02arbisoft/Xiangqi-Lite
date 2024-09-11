@@ -29,6 +29,12 @@ class Game(models.Model):
     red_time_remaining = models.IntegerField(default=300)
     black_time_remaining = models.IntegerField(default=300)
 
+    class Meta:
+        indexes  = [
+            models.Index(fields=['red_player']),
+            models.Index(fields=['black_player'])
+        ]
+
     def add_move(self, uci_move, thinking_time):
         """
         Adds a move to the game and updates the player's remaining time.
