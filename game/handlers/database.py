@@ -1,6 +1,5 @@
 from channels.db import database_sync_to_async
 
-from game.handlers.utils import get_user_id
 from game.models import Game
 from game.serializers import GameSerializer
 from game.utils import hashids
@@ -164,12 +163,12 @@ def get_player_details(player):
         'country': user.profile.country,
         'rating': player.rating
     }
+
 @database_sync_to_async
 def get_userprofile(consumer):
 
-    user_id = get_user_id(consumer)
     user_profile = {
-        'user_id': user_id,
+        'user_id':consumer.scope['user'].id ,
         'username': consumer.scope['user'].username,
         'profile_pic': consumer.scope['user'].profile.profile_picture.url
     }

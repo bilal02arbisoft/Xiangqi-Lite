@@ -1,8 +1,10 @@
 
 from game.handlers.database import get_userprofile
+from game.handlers.error_handling import exception_handler
 from game.handlers.utils import create_message_data, get_redis_conn, get_user_id, notify
 
 
+@exception_handler
 async def route_event(consumer, data):
     """
     Route the incoming event to the appropriate handler based on the event type.
@@ -18,6 +20,7 @@ async def route_event(consumer, data):
 
         await handler(consumer, data)
 
+@exception_handler
 async def handle_chat_message(consumer, data):
     """
      Handle the receipt and broadcasting of a chat message to a chat group.
@@ -28,6 +31,7 @@ async def handle_chat_message(consumer, data):
                  exclude_channel=consumer.channel_name)
 
 
+@exception_handler
 async def handle_chat_join(consumer,data):
     """
     Handle the event of a user joining a chat group and managing their profile information.
@@ -52,6 +56,7 @@ async def handle_chat_join(consumer,data):
     await notify(consumer, consumer.chat_group_name, {'type': 'chat.userprofile', 'message': user_profile},
                  is_group=True)
 
+@exception_handler
 async def handle_chat_leave(consumer):
     """
     Handle the event of a user leaving a chat group and removing their presence from the system.
