@@ -1,5 +1,10 @@
+import os
+
 import redis
 import redis.asyncio as aioredis
+from dotenv import load_dotenv
+
+load_dotenv()
 
 async_redis_pool = None
 sync_redis_client = None
@@ -15,9 +20,9 @@ async def setup_async_redis_pool():
     if not async_redis_pool:
 
         async_redis_pool = aioredis.Redis(
-            host='localhost',
-            port=6379,
-            db=0,
+            host=os.environ.get('REDIS_HOST'),
+            port=os.environ.get('REDIS_PORT'),
+            db=os.environ.get('REDIS_DB'),
             decode_responses=True
         )
     return async_redis_pool
@@ -41,9 +46,9 @@ def setup_sync_redis_client():
     if not sync_redis_client:
 
         sync_redis_client = redis.Redis(
-            host='localhost',
-            port=6379,
-            db=0,
+            host=os.environ.get('REDIS_HOST'),
+            port=os.environ.get('REDIS_PORT'),
+            db=os.environ.get('REDIS_DB'),
             decode_responses=True
         )
     return sync_redis_client
