@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from rest_framework import status
@@ -8,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from redis_utils.utils import get_sync_redis_client
 from users.error_handling import handle_exceptions
 from users.models import CustomUser, Profile
 from users.serializers import CustomUserSerializer, PasswordChangeSerializer, RequestOtpSerializer, VerifyOtpSerializer
@@ -146,11 +149,34 @@ class UserProfileEditView(BaseAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class ProfileView(BaseAPIView):
+    """
+    API view for retrieving user profile data for chat message render purpose.
+    """
+    @handle_exceptions
+    def get(self, request, user_id):
+       redis_client = get_sync_redis_client()
+       profile_data = redis_client.get(f'user_profile:{user_id}')
+       if profile_data:
+
+           profile = json.loads(profile_data)
+
+           return Response(profile, status=status.HTTP_200_OK)
+       user = CustomUser.objects.get(id=user_id)
+       profile = {
+           'username': user.username,
+           'profile_picture': user.profile.profile_picture.url,
+           'country': user.profile.country,
+        }
+
+       return Response(profile, status=status.HTTP_200_OK)
+
+
 class UserDeleteView(BaseAPIView):
     """
     View to handle user deletion. Requires authentication.
     """
-
     @handle_exceptions
     def delete(self, request):
         user = request.user
@@ -251,7 +277,6 @@ class NotFoundAPIView(BaseAPIView):
         response_data = {'message': 'URL Not found'}
 
         return Response(response_data, status=status.HTTP_404_NOT_FOUND)
-
     get = handle_not_found
     post = handle_not_found
     put = handle_not_found

@@ -163,3 +163,14 @@ def get_player_details(player):
         'country': user.profile.country,
         'rating': player.rating
     }
+
+@database_sync_to_async
+def get_userprofile(consumer):
+
+    user_profile = {
+        'user_id':consumer.scope['user'].id ,
+        'username': consumer.scope['user'].username,
+        'profile_pic': consumer.scope['user'].profile.profile_picture.url
+    }
+
+    return user_profile

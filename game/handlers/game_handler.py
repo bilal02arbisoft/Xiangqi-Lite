@@ -1,20 +1,25 @@
-from datetime import datetime, timezone
-
 from channels.db import database_sync_to_async
 
 from game.handlers.database import (
     add_viewer,
     end_game_update,
     get_game_details,
-    get_game_users_sync,
     get_or_create_player,
     get_player_by_username,
     get_username,
-    get_viewer_details,
     update_game_players,
     update_game_state,
 )
-from game.handlers.error_handling import GameNotFoundError, PlayerNotFoundError, exception_handler
+from game.handlers.error_handling import exception_handler
+from game.handlers.utils import (
+    create_message_data,
+    determine_role,
+    game_users_list,
+    get_game_or_error,
+    get_game_users,
+    notify,
+    send_error,
+)
 
 
 async def route_event(consumer, data):
@@ -90,13 +95,7 @@ async def handle_player_join(consumer, game_data, player):
         await update_game_players(consumer.game_id, red_player=player)
     elif not game_data['black_player']:
 
-        game_usernames = await update_game_players(consumer.game_id, black_player=player)
-        await notify(consumer, consumer.lobby_group_name, {
-            'type': 'lobby.game.join',
-            'game_id': consumer.game_id,
-            'red_player': game_usernames['red_player'],
-            'black_player': game_usernames['black_player'],
-        }, is_group=True)
+        await update_game_players(consumer.game_id, black_player=player)
         await handle_game_start(consumer)
 
 @exception_handler
@@ -138,14 +137,6 @@ async def handle_game_get(consumer, data):
     if game_data:
 
         await notify(consumer, consumer.channel_name, {'type': 'game.get.success', 'data': game_data})
-
-@exception_handler
-async def game_users_list(consumer, is_group=False):
-    """
-    Notify the list of users in a game.
-    """
-    users = await get_game_users(consumer.game_id)
-    await notify(consumer, consumer.room_group_name, {'type': 'game.users.list', 'data': users}, is_group=is_group)
 
 
 @exception_handler
@@ -193,82 +184,3 @@ async def handle_game_end(consumer, data):
         {'type': 'game.end.success', 'message':  winning_username},
         is_group=True
     )
-
-async def get_game_users(game_id, viewer=None):
-    """
-    Asynchronously retrieve the list of users in a game, optionally including viewer details.
-    """
-    users = await get_game_users_sync(game_id)
-    if viewer:
-
-        viewer_details = await get_viewer_details(viewer)
-
-        return viewer_details
-
-    return users
-
-async def send_error(consumer, message):
-    """
-    Send an error message to the consumer.
-    """
-    await notify(consumer, consumer.channel_name, {'type': 'error', 'message': message})
-
-
-def create_message_data(event_type, user_id, message=None, fen=None, move=None, player=None, game_data=None):
-    data = {
-        'type': event_type,
-        'user_id': user_id,
-        'timestamp': datetime.now(timezone.utc).isoformat()
-    }
-    if message:
-
-        data['message'] = message
-    if fen and move and player and game_data:
-
-        data.update({
-            'fen': fen,
-            'move': move,
-            'player': player,
-            'red_time_remaining': game_data['red_time_remaining'],
-            'black_time_remaining': game_data['black_time_remaining'],
-            'server_time': datetime.now().timestamp()
-        })
-
-    return data
-
-async def notify(consumer, target, message_data, is_group=False, exclude_channel=None):
-    payload = {
-        'type': 'send_message',
-        'message_data': message_data
-    }
-    if exclude_channel:
-
-        payload['exclude_channel'] = exclude_channel
-
-    if is_group:
-
-        return await consumer.channel_layer.group_send(target, payload)
-    await consumer.send_message({'message_data': message_data})
-
-async def get_game_or_error(game_id):
-    game_data = await get_game_details(game_id)
-    if not game_data:
-
-        raise GameNotFoundError(f"Game ID {game_id} not found.")
-
-    return game_data
-
-async def get_player_or_error(username):
-    player = await get_player_by_username(username)
-    if not player:
-
-        raise PlayerNotFoundError(f"Player with username {username} not found.")
-
-    return player
-
-
-def determine_role(game_data):
-    """
-    Determine the role of a user in a game (player or viewer).
-    """
-    return 'viewer' if game_data['red_player'] and game_data['black_player'] else 'player'
