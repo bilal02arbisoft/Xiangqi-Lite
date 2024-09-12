@@ -106,7 +106,6 @@ async def get_player_or_error(username):
 
     return player
 
-
 async def game_users_list(consumer, is_group=False):
     """
     Notify the list of users in a game.
