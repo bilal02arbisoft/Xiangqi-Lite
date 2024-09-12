@@ -1,5 +1,7 @@
 import functools
+import logging
 
+logger = logging.getLogger(__name__)
 
 class GameNotFoundError(Exception):
     """
@@ -47,7 +49,10 @@ def exception_handler(func):
             await send_error(consumer, str(e))
         except UnauthorizedError as e:
             await send_error(consumer, str(e))
-        except Exception:
+        except Exception as e:
+            logger.exception('An error occurred: %s', str(e))
             await send_error(consumer, 'An unexpected error occurred.')
+
+
 
     return wrapper

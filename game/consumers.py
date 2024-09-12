@@ -2,7 +2,8 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from game.handlers import game_handler
+from game.handlers import game_handler, globalchat_handler
+from redis_utils.utils import get_async_redis_pool
 
 
 class XiangqiConsumer(AsyncWebsocketConsumer):
@@ -12,8 +13,10 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         """Initialize the consumer with the default settings."""
         super().__init__(*args, **kwargs)
-        self.lobby_group_name = None
+        self.redis_conn = None
+        self.chat_group_name = 'global_chat'
         self.room_group_name = None
+
 
 
     async def connect(self):
@@ -23,22 +26,19 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
         user = self.scope['user']
         if user.is_authenticated:
 
-            self.lobby_group_name = 'lobby_group'
-            await self.channel_layer.group_add(
-                self.lobby_group_name,
-                self.channel_name
-            )
-            return await self.accept()
+            self.redis_conn = await get_async_redis_pool()
+            await self.accept()
+        else:
 
-        await self.close()
+         await self.close()
 
     async def disconnect(self, close_code):
         """
         Removes the WebSocket connection from the group upon disconnection.
         """
-        if self.lobby_group_name:
+        if self.chat_group_name:
             await self.channel_layer.group_discard(
-                self.lobby_group_name,
+                self.chat_group_name,
                 self.channel_name
             )
 
@@ -57,6 +57,10 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
         if event_type.startswith('game'):
 
             await game_handler.route_event(self, data)
+
+        if event_type.startswith('chat'):
+
+            await globalchat_handler.route_event(self, data)
 
     async def send_message(self, event):
         """

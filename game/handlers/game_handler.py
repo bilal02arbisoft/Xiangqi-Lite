@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from channels.db import database_sync_to_async
 
 from game.handlers.database import (
@@ -15,6 +13,7 @@ from game.handlers.database import (
     update_game_state,
 )
 from game.handlers.error_handling import GameNotFoundError, PlayerNotFoundError, exception_handler
+from game.handlers.utils import create_message_data, notify, send_error
 
 
 async def route_event(consumer, data):
@@ -90,13 +89,7 @@ async def handle_player_join(consumer, game_data, player):
         await update_game_players(consumer.game_id, red_player=player)
     elif not game_data['black_player']:
 
-        game_usernames = await update_game_players(consumer.game_id, black_player=player)
-        await notify(consumer, consumer.lobby_group_name, {
-            'type': 'lobby.game.join',
-            'game_id': consumer.game_id,
-            'red_player': game_usernames['red_player'],
-            'black_player': game_usernames['black_player'],
-        }, is_group=True)
+        await update_game_players(consumer.game_id, black_player=player)
         await handle_game_start(consumer)
 
 @exception_handler
@@ -207,48 +200,6 @@ async def get_game_users(game_id, viewer=None):
 
     return users
 
-async def send_error(consumer, message):
-    """
-    Send an error message to the consumer.
-    """
-    await notify(consumer, consumer.channel_name, {'type': 'error', 'message': message})
-
-
-def create_message_data(event_type, user_id, message=None, fen=None, move=None, player=None, game_data=None):
-    data = {
-        'type': event_type,
-        'user_id': user_id,
-        'timestamp': datetime.now(timezone.utc).isoformat()
-    }
-    if message:
-
-        data['message'] = message
-    if fen and move and player and game_data:
-
-        data.update({
-            'fen': fen,
-            'move': move,
-            'player': player,
-            'red_time_remaining': game_data['red_time_remaining'],
-            'black_time_remaining': game_data['black_time_remaining'],
-            'server_time': datetime.now().timestamp()
-        })
-
-    return data
-
-async def notify(consumer, target, message_data, is_group=False, exclude_channel=None):
-    payload = {
-        'type': 'send_message',
-        'message_data': message_data
-    }
-    if exclude_channel:
-
-        payload['exclude_channel'] = exclude_channel
-
-    if is_group:
-
-        return await consumer.channel_layer.group_send(target, payload)
-    await consumer.send_message({'message_data': message_data})
 
 async def get_game_or_error(game_id):
     game_data = await get_game_details(game_id)
