@@ -45,12 +45,15 @@ def setup_sync_redis_client():
     global sync_redis_client
     if not sync_redis_client:
 
-        sync_redis_client = redis.Redis(
+        sync_redis_client = redis.ConnectionPool(
             host=os.environ.get('REDIS_HOST'),
             port=os.environ.get('REDIS_PORT'),
             db=os.environ.get('REDIS_DB'),
-            decode_responses=True
+            decode_responses=True,
+            max_connections=10
         )
+        sync_redis_client = redis.Redis(connection_pool=sync_redis_client)
+
     return sync_redis_client
 
 
