@@ -28,7 +28,7 @@ async def handle_chat_message(consumer, data):
                  exclude_channel=consumer.channel_name)
 
 
-async def handle_chat_join(consumer):
+async def handle_chat_join(consumer,data):
     """
     Handle the event of a user joining a chat group and managing their profile information.
     """
