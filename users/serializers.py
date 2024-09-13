@@ -27,27 +27,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         fields = ['email', 'username', 'password', 'profile', 'is_email_verified', 'skill_level']
         extra_kwargs = {'password': {'write_only': True}}
 
-    @staticmethod
-    def validate_email(value):
-        """
-        Validate that the email is unique.
-        """
-        if CustomUser.objects.filter(email=value).exists():
-
-            raise serializers.ValidationError('A user with this email already exists.')
-
-        return value
-
-    @staticmethod
-    def validate_username(value):
-        """
-        Validate that the username is unique.
-        """
-        if CustomUser.objects.filter(username=value).exists():
-
-            raise serializers.ValidationError('A user with this username already exists.')
-
-        return value
 
     @staticmethod
     def validate_password(value):
@@ -130,16 +109,13 @@ class PasswordChangeSerializer(serializers.Serializer):
         old_password = data.get('old_password')
         new_password = data.get('new_password')
         user = self.context.get('user')
-
         if not user.check_password(old_password):
 
             raise serializers.ValidationError('Old password is incorrect.')
-        if plain_password_equals_email(new_password, user.email):
 
-            raise serializers.ValidationError('New password cannot be the same as the email.')
-        if user.check_password(new_password):
+        if old_password == new_password:
 
-            raise serializers.ValidationError('Please use a different password.')
+            raise serializers.ValidationError('New password cannot be the same as the old password.')
 
         return data
 

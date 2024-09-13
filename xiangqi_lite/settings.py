@@ -37,6 +37,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     os.getenv('FRONTEND_URL'),
 ]
+
 CORS_ALLOW_HEADERS = [
     'authorization',
     'content-type',

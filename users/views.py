@@ -1,5 +1,4 @@
-from django.contrib.sessions.models import Session
-from django.utils import timezone
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import status
@@ -82,7 +81,6 @@ class SignupView(BaseAPIView):
     View to handle user signup. No authentication required.
     """
     permission_classes = []
-
     @handle_exceptions
     def post(self, request):
         """
@@ -166,13 +164,6 @@ class PasswordChangeView(BaseAPIView):
     View to handle password change for authenticated users.
     """
     @handle_exceptions
-    def get_object(self):
-        """
-        Retrieve the authenticated user object.
-        """
-        return
-
-    @handle_exceptions
     def post(self, request):
         """
         Handle POST requests to change the user's password.
@@ -183,23 +174,12 @@ class PasswordChangeView(BaseAPIView):
 
             user.set_password(serializer.validated_data['new_password'])
             user.save()
-            self._invalidate_user_sessions(user)
 
             return Response({'message': 'Password has been changed successfully.'}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @handle_exceptions
-    def _invalidate_user_sessions(self, user):
-        """
-        Invalidate all active sessions for the user.
-        """
-        sessions = Session.objects.filter(expire_date__gte=timezone.now())
-        for session in sessions:
-            session_data = session.get_decoded()
-            if user.pk == session_data.get('_auth_user_id'):
 
-                session.delete()
 
 class RequestOtpView(BaseAPIView):
     """

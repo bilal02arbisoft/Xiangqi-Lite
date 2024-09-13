@@ -1,3 +1,4 @@
+import logging
 from functools import wraps
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -5,6 +6,8 @@ from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError, PermissionDenied
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 def handle_exceptions(func):
@@ -46,9 +49,10 @@ def handle_exceptions(func):
 
             return Response({'error': 'Value error', 'details': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        except Exception :
+        except Exception as e :
 
-                return Response({'error': 'An unexpected error occurred'},
+            logger.exception(e)
+            return Response({'error': 'An unexpected error occurred'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return wrapper
