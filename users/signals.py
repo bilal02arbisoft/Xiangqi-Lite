@@ -3,7 +3,8 @@ import os
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from users.models import CustomUser, Player, Profile
+from users.models import CustomUser, Profile
+from users.tasks import create_player_profile_task
 
 
 @receiver(post_delete, sender=Profile)
@@ -27,9 +28,4 @@ def create_player_profile(sender, instance, created, **kwargs):
     if created and kwargs.get('manual', False):
 
         skill_level = kwargs.get('skill_level', None)
-        Player.objects.create(
-            user=instance,
-            skill_level=skill_level
-        )
-        instance.temp_skill_level = None
-        instance.save()
+        create_player_profile_task.delay(instance.id, skill_level)
