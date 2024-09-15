@@ -1,4 +1,3 @@
-import json
 
 from django.contrib.sessions.models import Session
 from django.utils import timezone
@@ -157,12 +156,17 @@ class ProfileView(BaseAPIView):
     @handle_exceptions
     def get(self, request, user_id):
        redis_client = get_sync_redis_client()
-       profile_data = redis_client.get(f'user_profile:{user_id}')
+       profile_data = redis_client.hgetall(f'user_profile:{user_id}')
        if profile_data:
 
-           profile = json.loads(profile_data)
+           profile = {
+               k.decode('utf-8') if isinstance(k, bytes) else k:
+                   v.decode('utf-8') if isinstance(v, bytes) else v
+               for k, v in profile_data.items()
+           }
 
            return Response(profile, status=status.HTTP_200_OK)
+
        user = CustomUser.objects.get(id=user_id)
        profile = {
            'username': user.username,

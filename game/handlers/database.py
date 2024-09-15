@@ -170,7 +170,7 @@ def get_userprofile(consumer):
     user_profile = {
         'user_id':consumer.scope['user'].id ,
         'username': consumer.scope['user'].username,
-        'profile_pic': consumer.scope['user'].profile.profile_picture.url
+        'profile_picture': consumer.scope['user'].profile.profile_picture.url
     }
 
     return user_profile

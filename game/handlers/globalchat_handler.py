@@ -27,8 +27,7 @@ async def handle_chat_message(consumer, data):
     """
     chat_message = data.get('message')
     message_data = create_message_data('chat.message', consumer.scope['user'].id, chat_message)
-    await notify(consumer,  consumer.chat_group_name, message_data, is_group=True,
-                 exclude_channel=consumer.channel_name)
+    await notify(consumer,  consumer.chat_group_name, message_data, is_group=True)
 
 
 @exception_handler
