@@ -1,5 +1,7 @@
+aioredis==2.0.1
 amqp==5.2.0
 asgiref==3.8.1
+async-timeout==4.0.3
 attrs==24.2.0
 autobahn==24.4.2
 Automat==24.8.1
@@ -7,7 +9,7 @@ billiard==4.2.0
 blinker==1.8.2
 Brotli==1.1.0
 celery==5.4.0
-certifi==2024.7.4
+certifi==2024.8.30
 cffi==1.17.0
 cfgv==3.4.0
 channels==4.1.0
@@ -22,9 +24,10 @@ constantly==23.10.4
 cryptography==43.0.0
 daphne==4.1.2
 distlib==0.3.8
-Django
+Django==5.1.1
 django-anymail==11.1
 django-cors-headers==4.4.0
+django-redis==5.4.0
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 filelock==3.15.4
