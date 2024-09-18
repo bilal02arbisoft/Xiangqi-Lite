@@ -18,15 +18,16 @@ async def setup_async_redis_pool():
     """
     global async_redis_pool
     if not async_redis_pool:
-
         async_redis_pool = aioredis.Redis(
-            host=os.environ.get('REDIS_HOST'),
-            port=os.environ.get('REDIS_PORT'),
-            db=os.environ.get('REDIS_DB'),
-            decode_responses=True
+            host=os.environ.get('REDIS_HOST', 'localhost'),
+            port=int(os.environ.get('REDIS_PORT', 6379)),
+            db=int(os.environ.get('REDIS_DB', 0)),
+            decode_responses=True,
+            encoding='utf-8',
+            encoding_errors='strict'
         )
-    return async_redis_pool
 
+    return async_redis_pool
 
 async def get_async_redis_pool():
     """
@@ -44,16 +45,16 @@ def setup_sync_redis_client():
     """
     global sync_redis_client
     if not sync_redis_client:
-
         sync_redis_client = redis.ConnectionPool(
-            host=os.environ.get('REDIS_HOST'),
-            port=os.environ.get('REDIS_PORT'),
-            db=os.environ.get('REDIS_DB'),
+            host=os.environ.get('REDIS_HOST', 'localhost'),
+            port=int(os.environ.get('REDIS_PORT', 6379)),
+            db=int(os.environ.get('REDIS_DB', 0)),
             decode_responses=True,
+            encoding='utf-8',
+            encoding_errors='strict',
             max_connections=10
         )
         sync_redis_client = redis.Redis(connection_pool=sync_redis_client)
-
     return sync_redis_client
 
 

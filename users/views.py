@@ -1,4 +1,7 @@
 
+from urllib.parse import urljoin
+
+from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from rest_framework import status
@@ -149,32 +152,58 @@ class UserProfileEditView(BaseAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProfileView(BaseAPIView):
+class BatchProfileView(BaseAPIView):
     """
-    API view for retrieving user profile data for chat message render purpose.
+    API view for retrieving user profiles in batch.
     """
     @handle_exceptions
-    def get(self, request, user_id):
-       redis_client = get_sync_redis_client()
-       profile_data = redis_client.hgetall(f'user_profile:{user_id}')
-       if profile_data:
+    def post(self, request):
+        profiles = []
+        missing_user_ids = []
+        user_ids = request.data.get('user_ids', [])
+        if not user_ids or not isinstance(user_ids, list):
 
-           profile = {
-               k.decode('utf-8') if isinstance(k, bytes) else k:
-                   v.decode('utf-8') if isinstance(v, bytes) else v
-               for k, v in profile_data.items()
-           }
+            return Response({'error': 'user_ids is required and should be a list'}, status=status.HTTP_400_BAD_REQUEST)
 
-           return Response(profile, status=status.HTTP_200_OK)
+        redis_client = get_sync_redis_client()
+        pipeline = redis_client.pipeline()
 
-       user = CustomUser.objects.get(id=user_id)
-       profile = {
-           'username': user.username,
-           'profile_picture': user.profile.profile_picture.url,
-           'country': user.profile.country,
-        }
+        for user_id in user_ids:
+            pipeline.hgetall(f'user_profile:{user_id}')
+        redis_results = pipeline.execute()
 
-       return Response(profile, status=status.HTTP_200_OK)
+        for user_id, profile_data in zip(user_ids, redis_results):
+            if profile_data:
+
+                profile = {
+                    'user_id': user_id,
+                    'username': profile_data.get('username'),
+                    'profile_picture': profile_data.get('profile_picture', '')
+                }
+                profiles.append(profile)
+            else:
+                missing_user_ids.append(user_id)
+
+        if missing_user_ids:
+
+            pipeline = redis_client.pipeline()
+            users = CustomUser.objects.filter(id__in=missing_user_ids).select_related('profile').values(
+                'id', 'username', 'profile__profile_picture'
+            )
+            for user in users:
+                profile_picture_path = user['profile__profile_picture'] or ''
+                profile_picture_url = urljoin(settings.MEDIA_URL, profile_picture_path) if profile_picture_path else ''
+                profile = {
+                    'user_id': user['id'],
+                    'username': user['username'],
+                    'profile_picture': profile_picture_url,
+                }
+                profiles.append(profile)
+                pipeline.hset(f"user_profile:{user['id']}", mapping=profile)
+                pipeline.expire(f"user_profile:{user['id']}", 600)
+            pipeline.execute()
+
+        return Response({'profiles': profiles}, status=status.HTTP_200_OK)
 
 
 class UserDeleteView(BaseAPIView):
@@ -199,7 +228,6 @@ class PasswordChangeView(BaseAPIView):
         """
         Retrieve the authenticated user object.
         """
-
         return
 
     @handle_exceptions
