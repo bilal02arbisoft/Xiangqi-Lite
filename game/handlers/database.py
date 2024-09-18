@@ -166,15 +166,15 @@ def get_player_details(player):
 
 @database_sync_to_async
 def get_userprofile(consumer):
+    user = consumer.scope['user']
 
     user_profile = {
-        'user_id':consumer.scope['user'].id ,
-        'username': consumer.scope['user'].username,
-        'profile_picture': consumer.scope['user'].profile.profile_picture.url
+        'user_id':str(user.id) ,
+        'username': str(user.username),
+        'profile_picture': str(user.profile.profile_picture.url) if user.profile.profile_picture else ''
     }
 
     return user_profile
-
 
 @database_sync_to_async
 def save_message(sender, content, room_name):

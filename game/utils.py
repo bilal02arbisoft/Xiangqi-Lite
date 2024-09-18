@@ -56,7 +56,10 @@ def fetch_messages_from_cache(cache_key, last_id=None, page_size=30):
 
 
 def get_paginated_messages(room_name, last_id=None, page_size=30):
-    cached_messages = fetch_messages_from_cache(room_name, int(last_id), page_size)
+    if last_id:
+
+        last_id = int(last_id)
+    cached_messages = fetch_messages_from_cache(room_name, last_id, page_size)
     if cached_messages:
 
         return cached_messages
