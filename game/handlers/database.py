@@ -1,8 +1,8 @@
+
 from channels.db import database_sync_to_async
 
-from game.models import Game
-from game.serializers import GameSerializer
-from game.utils import hashids
+from game.models import ChatMessage, Game, Room, hashids
+from game.serializers import ChatMessageSerializer, GameSerializer
 from users.models import CustomUser, Player
 
 
@@ -174,3 +174,17 @@ def get_userprofile(consumer):
     }
 
     return user_profile
+
+
+@database_sync_to_async
+def save_message(sender, content, room_name):
+        room, _ = Room.objects.get_or_create(name=room_name)
+        message_instance = ChatMessage.objects.create(
+            room=room,
+            sender=sender,
+            content=content
+        )
+        serializer = ChatMessageSerializer(message_instance)
+        message_data = serializer.data
+
+        return message_data

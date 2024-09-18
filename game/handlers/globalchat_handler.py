@@ -1,5 +1,7 @@
 
-from game.handlers.database import get_userprofile
+import json
+
+from game.handlers.database import get_userprofile, save_message
 from game.handlers.error_handling import exception_handler
 from game.handlers.utils import create_message_data, get_redis_conn, get_user_id, notify
 
@@ -20,13 +22,19 @@ async def route_event(consumer, data):
 
         await handler(consumer, data)
 
-@exception_handler
+
 async def handle_chat_message(consumer, data):
     """
-     Handle the receipt and broadcasting of a chat message to a chat group.
+    Handle the receipt and broadcasting of a chat message to a chat group.
     """
     chat_message = data.get('message')
-    message_data = create_message_data('chat.message', consumer.scope['user'].id, chat_message)
+    redis_client = get_redis_conn(consumer)
+    message_data = await save_message(consumer.scope['user'], chat_message,'global_chat')
+    message_json = json.dumps(message_data)
+    message_id = message_data['id']
+    await redis_client.zadd('global_chat', {message_json: message_id})
+    await redis_client.zremrangebyrank('global_chat', 0, -1001)
+    message_data = create_message_data('chat.message', get_user_id(consumer), chat_message)
     await notify(consumer,  consumer.chat_group_name, message_data, is_group=True)
 
 

@@ -4,9 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from game.models import Game
+from game.models import Game, hashids
 from game.serializers import GameSerializer
-from game.utils import hashids
+from game.utils import get_paginated_messages
 
 
 class BaseAPIView(APIView):
@@ -84,3 +84,16 @@ class GameUpdateView(BaseAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class MessagesView(BaseAPIView):
+
+    def get(self, request, *args, **kwargs):
+        room_name = request.GET.get('room_name')
+        last_id = request.GET.get('last_id', None)
+        if not room_name:
+
+            return Response({'error': 'room_name is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        messages = get_paginated_messages(room_name, last_id)
+
+        return Response({'messages': messages}, status=status.HTTP_200_OK)
