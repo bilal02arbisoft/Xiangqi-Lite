@@ -124,8 +124,10 @@ async def handle_game_move(consumer, data):
     await update_game_state(consumer.game_id, fen, move, thinking_time)
     game_data = await get_game_details(consumer.game_id)
     message_data = create_message_data('game.move', consumer.scope['user'].id,
-                                       fen=fen, move=move, player=player, game_data=game_data)
-    await notify(consumer, consumer.room_group_name, message_data, is_group=True, exclude_channel=consumer.channel_name)
+                                       fen=fen, move=move, player=player, game_data=game_data,
+                                       thinking_time=thinking_time)
+    await notify(consumer, consumer.room_group_name, message_data, is_group=True,
+                 exclude_channel=consumer.channel_name)
 
 @exception_handler
 async def handle_game_get(consumer, data):

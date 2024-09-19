@@ -110,7 +110,7 @@ class LogoutView(BaseAPIView):
 
     @handle_exceptions
     def post(self, request):
-        refresh_token = request.data['refresh']
+        refresh_token = request.data['refresh_token']
         token = RefreshToken(refresh_token)
         token.blacklist()
 

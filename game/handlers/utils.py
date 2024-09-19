@@ -34,7 +34,8 @@ async def notify(consumer, target, message_data, is_group=False, exclude_channel
         return await consumer.channel_layer.group_send(target, payload)
     await consumer.send_message({'message_data': message_data})
 
-def create_message_data(event_type, user_id, message=None, fen=None, move=None, player=None, game_data=None):
+def create_message_data(event_type, user_id, message=None, fen=None, move=None, player=None,
+                        game_data=None, thinking_time=None):
     """
     Create a dictionary containing message data, including optional game-related information.
     """
@@ -46,7 +47,7 @@ def create_message_data(event_type, user_id, message=None, fen=None, move=None, 
     if message:
 
         data['message'] = message
-    if fen and move and player and game_data:
+    if fen and move and player and game_data and thinking_time:
 
         data.update({
             'fen': fen,
@@ -54,7 +55,8 @@ def create_message_data(event_type, user_id, message=None, fen=None, move=None, 
             'player': player,
             'red_time_remaining': game_data['red_time_remaining'],
             'black_time_remaining': game_data['black_time_remaining'],
-            'server_time': datetime.now().timestamp()
+            'server_time': datetime.now().timestamp(),
+            'thinking_time': thinking_time
         })
 
     return data
