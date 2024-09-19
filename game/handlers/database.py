@@ -134,9 +134,7 @@ def get_viewer_details(viewer):
     return {
         'username': viewer.username,
         'profile_picture': viewer.profile.profile_picture.url if viewer.profile.profile_picture else None,
-        'id': viewer.id,
-        'country': viewer.profile.country,
-        'rating': viewer.player.rating if hasattr(viewer, 'player') else None
+        'id': viewer.id
     }
 
 def decode_game_id(game_id):

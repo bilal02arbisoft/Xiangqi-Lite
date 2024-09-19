@@ -51,6 +51,7 @@ class Game(models.Model):
         if self.turn == 'red':
 
             self.red_time_remaining -= thinking_time
+            self.turn = 'black' if self.turn == 'red' else 'red'
 
             return
         self.black_time_remaining -= thinking_time
