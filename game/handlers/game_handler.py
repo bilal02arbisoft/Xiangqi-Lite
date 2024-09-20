@@ -1,3 +1,5 @@
+import json
+
 from channels.db import database_sync_to_async
 
 from game.handlers.database import (
@@ -7,6 +9,7 @@ from game.handlers.database import (
     get_or_create_player,
     get_player_by_username,
     get_username,
+    save_message,
     update_game_players,
     update_game_state,
 )
@@ -17,6 +20,7 @@ from game.handlers.utils import (
     game_users_list,
     get_game_or_error,
     get_game_users,
+    get_redis_conn,
     notify,
     send_error,
 )
@@ -50,8 +54,16 @@ async def handle_game_chat(consumer, data):
         await send_error(consumer, 'No message provided.')
 
         return
+    redis_client = get_redis_conn(consumer)
+    message_data = await save_message(consumer.scope['user'], chat_message, consumer.room_group_name)
+    message_json = json.dumps(message_data)
+    message_id = message_data['id']
+    await redis_client.zadd(consumer.room_group_name, {message_json: message_id})
+    await redis_client.zremrangebyrank(consumer.room_group_name, 0, -1001)
     message_data = create_message_data('game.chat', consumer.scope['user'].id, chat_message)
+    await save_message(consumer.scope['user'], chat_message, consumer.room_group_name)
     await notify(consumer, consumer.room_group_name, message_data, is_group=True, exclude_channel=consumer.channel_name)
+
 
 @exception_handler
 async def handle_game_join(consumer, data):
@@ -59,7 +71,7 @@ async def handle_game_join(consumer, data):
     Handle a game join event.
     """
     consumer.game_id = data.get('id')
-    consumer.room_group_name = f'game_{consumer.game_id}'
+    consumer.room_group_name = consumer.game_id
     await consumer.channel_layer.group_add(consumer.room_group_name, consumer.channel_name)
     game_data = await get_game_or_error(consumer.game_id)
     if not game_data:
