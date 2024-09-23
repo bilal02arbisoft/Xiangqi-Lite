@@ -59,7 +59,7 @@ class SendFriendRequestView(BaseFriendRequestView):
 class AcceptRejectFriendRequestView(BaseFriendRequestView):
     """
     View to handle accepting or rejecting a friend request.
-     POST request with the 'from_user' and 'action' fields (either 'accepted' or 'rejected').
+    POST request with the 'from_user' and 'action' fields (either 'accepted' or 'rejected').
     Performs the specified action on the friend request and returns an appropriate message.
     """
     @handle_exceptions
@@ -108,7 +108,6 @@ class ListFriendsView(BaseAPIView):
     def get(self, request, *args, **kwargs):
         user2_ids = Friendship.objects.filter(user1=request.user).values_list('user2', flat=True)
         user2_objects = User.objects.filter(id__in=user2_ids)
-
         serializer = CustomUserSerializer(user2_objects, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)

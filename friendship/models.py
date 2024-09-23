@@ -10,7 +10,6 @@ class FriendRequest(models.Model):
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
     ]
-
     from_user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='sent_requests', on_delete=models.CASCADE)
     to_user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='received_requests', on_delete=models.CASCADE)
     timestamp = models.DateTimeField(default=timezone.now)

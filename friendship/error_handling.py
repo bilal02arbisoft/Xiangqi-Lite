@@ -7,6 +7,7 @@ from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.response import Response
 
 from friendship.models import FriendRequest
+from users.error_handling import logger
 from users.models import CustomUser
 
 
@@ -57,6 +58,7 @@ def handle_exceptions(func):
             return Response({'error': 'Invalid value', 'details': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
+            logger.exception(e)
 
             return Response({'error': 'An unexpected error occurred', 'details': str(e)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
