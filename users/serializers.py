@@ -77,7 +77,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         instance.username = validated_data.get('username', instance.username)
         instance.email = validated_data.get('email', instance.email)
         instance.save()
-
         profile, created = Profile.objects.get_or_create(user=instance)
         for attr, value in profile_data.items():
             setattr(profile, attr, value)
@@ -112,7 +111,6 @@ class PasswordChangeSerializer(serializers.Serializer):
         if not user.check_password(old_password):
 
             raise serializers.ValidationError('Old password is incorrect.')
-
         if old_password == new_password:
 
             raise serializers.ValidationError('New password cannot be the same as the old password.')

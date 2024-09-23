@@ -20,7 +20,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         regex=r'^[a-zA-Z0-9]*$',
         message='Username must be alphanumeric (only letters and numbers are allowed).'
     )
-
     email = models.EmailField(
         unique=True,
         validators=[EmailValidator()],
@@ -41,7 +40,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
 
     objects = CustomUserManager()
-
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
     class Meta:
@@ -89,6 +87,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         Validates the OTP provided by the user.
         """
         if self.email_verification_otp == otp and (timezone.now() - self.otp_generated_at) <= timedelta(minutes=10):
+
             self.verify_email()
 
             return True

@@ -110,7 +110,7 @@ class LogoutView(BaseAPIView):
         token = RefreshToken(refresh_token)
         token.blacklist()
 
-        return Response('Logged out successfully', status=status.HTTP_205_RESET_CONTENT)
+        return Response({'message':'Logged out successfully'}, status=status.HTTP_205_RESET_CONTENT)
 
 class UserProfileEditView(BaseAPIView):
     """
