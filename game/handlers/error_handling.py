@@ -1,7 +1,7 @@
 import functools
-import logging
 
-logger = logging.getLogger(__name__)
+from users.error_handling import logger
+
 
 class GameNotFoundError(Exception):
     """

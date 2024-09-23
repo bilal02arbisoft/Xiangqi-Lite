@@ -159,32 +159,28 @@ async def handle_game_end(consumer, data):
     Handle a game end event.
     """
     losing_username = data.get('losing_player')
-
     if not losing_username:
+
         await send_error(consumer, 'Invalid data: No losing username provided.')
 
         return
-
     game_data = await get_game_or_error(consumer.game_id)
     if not game_data:
 
         return
-
     losing_player = await get_player_by_username(losing_username)
     if not losing_player:
+
         await send_error(consumer, 'Losing player not found.')
 
         return
-
     winning_player = None
-
     if game_data['red_player'] == losing_username:
 
         winning_player = await get_player_by_username(game_data['black_player'])
     elif game_data['black_player'] == losing_username:
 
         winning_player = await get_player_by_username(game_data['red_player'])
-
     if not winning_player:
 
         await send_error(consumer, 'Winning player not found.')
