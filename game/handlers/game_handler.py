@@ -254,7 +254,7 @@ async def get_game_or_error(game_id):
     game_data = await get_game_details(game_id)
     if not game_data:
 
-        raise GameNotFoundError(f"Game ID {game_id} not found.")
+        raise GameNotFoundError(f'Game ID {game_id} not found.')
 
     return game_data
 
@@ -262,7 +262,7 @@ async def get_player_or_error(username):
     player = await get_player_by_username(username)
     if not player:
 
-        raise PlayerNotFoundError(f"Player with username {username} not found.")
+        raise PlayerNotFoundError(f'Player with username {username} not found.')
 
     return player
 

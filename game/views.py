@@ -34,9 +34,9 @@ class GameCreateView(BaseAPIView):
             'status': 'ongoing',
             'viewers': None
         }
-
         serializer = GameSerializer(data=game_data)
         if serializer.is_valid():
+
             serializer.save()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -73,9 +73,7 @@ class GameUpdateView(BaseAPIView):
         if not decoded_id:
 
             return Response({'error': 'Invalid game ID'}, status=status.HTTP_404_NOT_FOUND)
-
         game = get_object_or_404(Game, id=decoded_id[0])
-
         serializer = GameSerializer(game, data=request.data, partial=True)
         if serializer.is_valid():
 
