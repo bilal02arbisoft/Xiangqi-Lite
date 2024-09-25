@@ -86,8 +86,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         """
         Validates the OTP provided by the user.
         """
-        if self.email_verification_otp == otp and (timezone.now() - self.otp_generated_at) <= timedelta(minutes=10):
 
+        if self.email_verification_otp == otp and (timezone.now() - self.otp_generated_at) <= timedelta(minutes=10):
             self.verify_email()
 
             return True
@@ -140,4 +140,4 @@ class Player(models.Model):
 
     def __str__(self):
 
-        return f"{self.user.username} - {self.skill_level} - {self.rating}"
+        return f'{self.user.username} - {self.skill_level} - {self.rating}'

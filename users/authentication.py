@@ -14,6 +14,7 @@ class UsernameOrEmailBackend(ModelBackend):
         Authenticate a user based on either email or username and password.
         """
         user = self.get_user_by_email_or_username(username)
+
         if user and user.check_password(password) and self.user_can_authenticate(user):
 
             return user

@@ -43,8 +43,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         """
         password = data.get('password')
         email = data.get('email')
-        if password and email and plain_password_equals_email(password, email):
 
+        if password and email and plain_password_equals_email(password, email):
             raise serializers.ValidationError('Password and email cannot be the same.')
 
         return data
@@ -62,8 +62,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         post_save.send(sender=user.__class__, instance=user, created=True, manual=True, skill_level=skill_level)
-        if profile_data:
 
+        if profile_data:
             Profile.objects.create(user=user, **profile_data)
 
         return user
@@ -108,11 +108,11 @@ class PasswordChangeSerializer(serializers.Serializer):
         old_password = data.get('old_password')
         new_password = data.get('new_password')
         user = self.context.get('user')
+
         if not user.check_password(old_password):
-
             raise serializers.ValidationError('Old password is incorrect.')
-        if old_password == new_password:
 
+        if old_password == new_password:
             raise serializers.ValidationError('New password cannot be the same as the old password.')
 
         return data
@@ -128,8 +128,8 @@ class RequestOtpSerializer(serializers.Serializer):
         """
         Validate that the email exists in the system.
         """
-        if not CustomUser.objects.filter(email=value).exists():
 
+        if not CustomUser.objects.filter(email=value).exists():
             raise serializers.ValidationError(f"This email {value} is not registered.")
 
         return value
@@ -158,8 +158,8 @@ class VerifyOtpSerializer(serializers.Serializer):
         Validate the OTP and email combination.
         """
         user = CustomUser.objects.get(email=data['email'])
-        if not user.is_otp_valid(data['otp']):
 
+        if not user.is_otp_valid(data['otp']):
             raise serializers.ValidationError('Invalid or expired OTP.')
 
         return data
