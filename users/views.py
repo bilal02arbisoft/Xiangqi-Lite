@@ -25,7 +25,8 @@ class UsersListView(BaseAPIView):
     """
     View to retrieve a list of all users. Requires authentication.
     """
-    @method_decorator(cache_page(60 * 15))
+    TTL = 60 * 15
+    @method_decorator(cache_page(TTL))
     @handle_exceptions
     def get(self, request):
         """
