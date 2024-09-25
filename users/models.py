@@ -1,4 +1,4 @@
-import random
+import secrets
 import string
 from datetime import timedelta
 
@@ -57,7 +57,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         """
         Generates a one-time password (OTP) for email verification and sends it to the user's email.
         """
-        otp = ''.join(random.choices(string.digits, k=6))
+        otp = ''.join(secrets.choice(string.digits) for _ in range(6))
         self.email_verification_otp = otp
         self.otp_generated_at = timezone.now()
         self.save()

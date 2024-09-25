@@ -19,7 +19,7 @@ class BaseAPIView(APIView):
     Base API view that includes default permission classes and error handling.
     All views inheriting from this class will automatically apply the error handling decorator.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,]
 
 class UsersListView(BaseAPIView):
     """
@@ -63,6 +63,10 @@ class CustomTokenRefreshView(TokenRefreshView, BaseAPIView):
     @handle_exceptions
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh_token')
+
+        if not refresh_token:
+
+          return Response({'error': 'Refresh token not provided'}, status=status.HTTP_400_BAD_REQUEST)
         request.data['refresh'] = refresh_token
         response = super().post(request, *args, **kwargs)
         new_access_token = response.data.get('access')
@@ -87,8 +91,8 @@ class SignupView(BaseAPIView):
         Handle POST requests to create a new user.
         """
         serializer = CustomUserSerializer(data=request.data)
-        if serializer.is_valid():
 
+        if serializer.is_valid():
             serializer.save()
             response_data = {
                 'message': 'User created successfully',
@@ -135,8 +139,8 @@ class UserProfileEditView(BaseAPIView):
         """
         user = request.user
         serializer = CustomUserSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
 
+        if serializer.is_valid():
             serializer.save()
             response_data = {
                 'message': 'Successfully Updated the Profile',
@@ -170,8 +174,8 @@ class PasswordChangeView(BaseAPIView):
         """
         user = self.request.user
         serializer = PasswordChangeSerializer(data=request.data, context={'user': user})
-        if serializer.is_valid():
 
+        if serializer.is_valid():
             user.set_password(serializer.validated_data['new_password'])
             user.save()
 
@@ -189,8 +193,8 @@ class RequestOtpView(BaseAPIView):
     def post(self, request, *args, **kwargs):
         user_email = {'email': request.user.email}
         serializer = RequestOtpSerializer(data=user_email)
-        if serializer.is_valid():
 
+        if serializer.is_valid():
             serializer.save()
 
             return Response({'message': 'OTP sent to your email successfully'}, status=status.HTTP_200_OK)
@@ -209,8 +213,8 @@ class VerifyOtpView(BaseAPIView):
             'otp': request.data.get('otp')
         }
         serializer = VerifyOtpSerializer(data=request_data)
-        if serializer.is_valid():
 
+        if serializer.is_valid():
             serializer.save()
             request.user.send_verify_email()
 
