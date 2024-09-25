@@ -20,7 +20,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         regex=r'^[a-zA-Z0-9]*$',
         message='Username must be alphanumeric (only letters and numbers are allowed).'
     )
-
     email = models.EmailField(
         unique=True,
         validators=[EmailValidator()],
@@ -39,7 +38,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_email_verified = models.BooleanField(default=False)
     otp_generated_at = models.DateTimeField(blank=True, null=True)
     email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
-
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'username'
@@ -89,6 +87,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         Validates the OTP provided by the user.
         """
         if self.email_verification_otp == otp and (timezone.now() - self.otp_generated_at) <= timedelta(minutes=10):
+
             self.verify_email()
 
             return True
@@ -141,4 +140,4 @@ class Player(models.Model):
 
     def __str__(self):
 
-        return f"{self.user.username} - {self.skill_level} - {self.rating}"
+        return f'{self.user.username} - {self.skill_level} - {self.rating}'

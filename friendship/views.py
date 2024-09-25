@@ -71,15 +71,14 @@ class AcceptRejectFriendRequestView(BaseFriendRequestView):
         friend_request = serializer.context['friend_request']
         action = serializer.validated_data['action']
         if action == 'accepted':
+
             friend_request.accept()
 
             return Response({'message': 'Friend request accepted!'}, status=status.HTTP_200_OK)
         elif action == 'rejected':
-
             friend_request.reject()
 
             return Response({'message': 'Friend request rejected!'}, status=status.HTTP_200_OK)
-
 
 
 class ListSentFriendRequestsView(BaseAPIView):
@@ -94,7 +93,6 @@ class ListSentFriendRequestsView(BaseAPIView):
         if not requests.exists():
 
             return Response({'message': 'No friend requests sent.'}, status=status.HTTP_200_OK)
-
         serializer = FriendRequestSerializer(requests, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -108,7 +106,6 @@ class ListFriendsView(BaseAPIView):
     def get(self, request, *args, **kwargs):
         user2_ids = Friendship.objects.filter(user1=request.user).values_list('user2', flat=True)
         user2_objects = User.objects.filter(id__in=user2_ids)
-
         serializer = CustomUserSerializer(user2_objects, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)

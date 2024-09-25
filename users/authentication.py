@@ -7,7 +7,6 @@ class UsernameOrEmailBackend(ModelBackend):
     """
     Custom authentication backend to allow login with either username or email.
     """
-
     def authenticate(self, request, username=None, password=None, **kwargs):
         """
         Authenticate a user based on either email or username and password.

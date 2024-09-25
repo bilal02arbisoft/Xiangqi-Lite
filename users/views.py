@@ -22,8 +22,7 @@ from users.serializers import CustomUserSerializer, PasswordChangeSerializer, Re
 
 class BaseAPIView(APIView):
     """
-    Base API view that includes default permission classes and error handling.
-    All views inheriting from this class will automatically apply the error handling decorator.
+    Base API view that includes default permission classes.
     """
     permission_classes = [IsAuthenticated]
 
@@ -110,14 +109,17 @@ class LogoutView(BaseAPIView):
     """
     View to handle user logout by blacklisting the refresh token.
     """
-
     @handle_exceptions
     def post(self, request):
-        refresh_token = request.data['refresh_token']
-        token = RefreshToken(refresh_token)
-        token.blacklist()
+        refresh_token = request.data['refresh_token', None]
+        if refresh_token:
 
-        return Response('Logged out successfully', status=status.HTTP_205_RESET_CONTENT)
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response('Logged out successfully', status=status.HTTP_205_RESET_CONTENT)
+
+        return Response('Refresh Token Required',status=status.HTTP_400_BAD_REQUEST)
 
 class UserProfileEditView(BaseAPIView):
     """
@@ -167,14 +169,11 @@ class BatchProfileView(BaseAPIView):
         if not user_ids or not isinstance(user_ids, list):
 
             return Response({'error': 'user_ids is required and should be a list'}, status=status.HTTP_400_BAD_REQUEST)
-
         redis_client = get_sync_redis_client()
         pipeline = redis_client.pipeline()
-
         for user_id in user_ids:
             pipeline.hgetall(f'user_profile:{user_id}')
         redis_results = pipeline.execute()
-
         for user_id, profile_data in zip(user_ids, redis_results):
             if profile_data:
 
@@ -186,7 +185,6 @@ class BatchProfileView(BaseAPIView):
                 profiles.append(profile)
             else:
                 missing_user_ids.append(user_id)
-
         if missing_user_ids:
 
             pipeline = redis_client.pipeline()
@@ -206,7 +204,7 @@ class BatchProfileView(BaseAPIView):
                 pipeline.expire(f"user_profile:{user['id']}", 600)
             pipeline.execute()
 
-        return Response({'profiles': profiles}, status=status.HTTP_200_OK)
+        return Response({'Profiles': profiles}, status=status.HTTP_200_OK)
 
 
 class UserDeleteView(BaseAPIView):

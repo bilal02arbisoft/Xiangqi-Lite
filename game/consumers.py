@@ -17,7 +17,6 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
         self.room_group_name = None
 
 
-
     async def connect(self):
         """
         Accepts or rejects an incoming WebSocket connection.
@@ -28,7 +27,6 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
             self.redis_conn = await get_async_redis_pool()
             await self.accept()
         else:
-
          await self.close()
 
     async def disconnect(self, close_code):
@@ -56,7 +54,6 @@ class XiangqiConsumer(AsyncWebsocketConsumer):
         if event_type.startswith('game'):
 
             await game_handler.route_event(self, data)
-
         if event_type.startswith('chat'):
 
             await globalchat_handler.route_event(self, data)
