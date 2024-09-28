@@ -24,7 +24,10 @@ from users.views import NotFoundAPIView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),
+    path('game/', include('game.urls')),
     re_path(r'^.*$', NotFoundAPIView.as_view(), name='not-found'),
+
+
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
