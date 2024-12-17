@@ -2,7 +2,9 @@
 profile = "black"
 line_length = 120
 known_third_party = ["django", "flask"]
+skip_glob = ["**/migrations/*"]
 
 [tool.ruff]
 line-length = 120
 select = ["E", "F", "W"]
+exclude = ["**/migrations/*"]
